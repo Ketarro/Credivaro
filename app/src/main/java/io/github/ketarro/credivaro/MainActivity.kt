@@ -1,6 +1,11 @@
 package io.github.ketarro.credivaro
 
 import android.os.Bundle
+import android.graphics.drawable.ColorDrawable
+import androidx.compose.foundation.background
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
@@ -39,21 +44,31 @@ class MainActivity : AppCompatActivity() {
                 Appearance.DARK -> true
                 Appearance.SYSTEM -> isSystemInDarkTheme()
             }
-            SideEffect {
+            val configuration = LocalConfiguration.current
+            var language by remember { mutableStateOf(currentAppLanguage()) }
+            LaunchedEffect(configuration) { language = currentAppLanguage() }
+            LaunchedEffect(dark) {
+                window.setBackgroundDrawable(ColorDrawable(android.graphics.Color.parseColor(
+                    if (dark) "#102D36" else "#F5F7FA"
+                )))
                 val style = if (dark) SystemBarStyle.dark(android.graphics.Color.TRANSPARENT)
                     else SystemBarStyle.light(android.graphics.Color.TRANSPARENT, android.graphics.Color.TRANSPARENT)
                 enableEdgeToEdge(statusBarStyle = style, navigationBarStyle = style)
             }
             CredivaroTheme(dark) {
                 AlphaScreen(
+                    dark = dark,
                     appearance = appearance,
                     onAppearance = { value ->
                         preferences.edit().putString("mode", value.stored).apply()
                         appearance = value
                     },
-                    language = AppLanguage.fromTag(AppCompatDelegate.getApplicationLocales().get(0)?.language),
+                    language = language,
                     onLanguage = { value ->
-                        AppCompatDelegate.setApplicationLocales(LocaleListCompat.forLanguageTags(value.tag))
+                        if (value != currentAppLanguage()) {
+                            AppCompatDelegate.setApplicationLocales(LocaleListCompat.forLanguageTags(value.tag))
+                        }
+                        language = currentAppLanguage()
                     }
                 )
             }
@@ -61,8 +76,12 @@ class MainActivity : AppCompatActivity() {
     }
 }
 
+private fun currentAppLanguage(): AppLanguage =
+    AppLanguage.fromTag(AppCompatDelegate.getApplicationLocales().get(0)?.language)
+
 @Composable
 private fun AlphaScreen(
+    dark: Boolean,
     appearance: Appearance, onAppearance: (Appearance) -> Unit,
     language: AppLanguage, onLanguage: (AppLanguage) -> Unit
 ) {
@@ -73,21 +92,11 @@ private fun AlphaScreen(
     Scaffold(
         containerColor = colors.background,
         bottomBar = {
-            NavigationBar(containerColor = colors.surface, tonalElevation = 0.dp) {
-                val navColors = NavigationBarItemDefaults.colors(
-                    selectedIconColor = colors.onSecondaryContainer,
-                    selectedTextColor = colors.primary,
-                    indicatorColor = colors.secondaryContainer,
-                    unselectedIconColor = colors.onSurfaceVariant,
-                    unselectedTextColor = colors.onSurfaceVariant
-                )
-                NavigationBarItem(selected = !settings, onClick = { settings = false; about = false },
-                    icon = { Icon(painterResource(R.drawable.ic_home), null) },
-                    label = { Text(stringResource(R.string.home)) }, colors = navColors)
-                NavigationBarItem(selected = settings, onClick = { settings = true; about = false },
-                    icon = { Icon(painterResource(R.drawable.ic_settings), null) },
-                    label = { Text(stringResource(R.string.settings)) }, colors = navColors)
-            }
+            CredivaroBottomBar(
+                settingsSelected = settings,
+                onHome = { settings = false; about = false },
+                onSettings = { settings = true; about = false }
+            )
         }
     ) { padding ->
         Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.TopCenter) {
@@ -102,7 +111,7 @@ private fun AlphaScreen(
                         }
                         Text(stringResource(R.string.about), style = MaterialTheme.typography.titleLarge)
                     }
-                    BrandHeader()
+                    BrandHeader(dark)
                     SettingsCard {
                         Text(stringResource(R.string.version_label, BuildConfig.VERSION_NAME), style = MaterialTheme.typography.titleMedium)
                         Text(stringResource(R.string.build_label, BuildConfig.VERSION_CODE), style = MaterialTheme.typography.bodyMedium)
@@ -145,7 +154,7 @@ private fun AlphaScreen(
                         }
                     }
                 } else {
-                    BrandHeader()
+                    BrandHeader(dark)
                     Text(stringResource(R.string.tagline), color = colors.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
                     Card(shape = RoundedCornerShape(20.dp),
                         colors = CardDefaults.cardColors(containerColor = colors.primaryContainer, contentColor = colors.onPrimaryContainer)) {
@@ -174,9 +183,79 @@ private fun AlphaScreen(
 }
 
 @Composable
-private fun BrandHeader() {
+private fun CredivaroBottomBar(
+    settingsSelected: Boolean,
+    onHome: () -> Unit,
+    onSettings: () -> Unit
+) {
+    val colors = MaterialTheme.colorScheme
+    Surface(color = colors.surface, tonalElevation = 0.dp) {
+        Column(Modifier.fillMaxWidth().navigationBarsPadding()) {
+            HorizontalDivider(color = colors.outlineVariant.copy(alpha = 0.55f))
+            Row(
+                Modifier.fillMaxWidth().selectableGroup().padding(horizontal = 16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                CompactDestination(
+                    modifier = Modifier.weight(1f),
+                    selected = !settingsSelected,
+                    icon = R.drawable.ic_home,
+                    label = stringResource(R.string.home),
+                    onClick = onHome
+                )
+                CompactDestination(
+                    modifier = Modifier.weight(1f),
+                    selected = settingsSelected,
+                    icon = R.drawable.ic_settings,
+                    label = stringResource(R.string.settings),
+                    onClick = onSettings
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun CompactDestination(
+    modifier: Modifier,
+    selected: Boolean,
+    icon: Int,
+    label: String,
+    onClick: () -> Unit
+) {
+    val colors = MaterialTheme.colorScheme
+    val contentColor = if (selected) colors.primary else colors.onSurfaceVariant
+    Column(
+        modifier.heightIn(min = 64.dp)
+            .selectable(selected = selected, onClick = onClick, role = Role.Tab)
+            .padding(horizontal = 8.dp, vertical = 5.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(3.dp, Alignment.CenterVertically)
+    ) {
+        Box(
+            Modifier.width(22.dp).height(3.dp).background(
+                if (selected) colors.primary else androidx.compose.ui.graphics.Color.Transparent,
+                RoundedCornerShape(2.dp)
+            )
+        )
+        Icon(painterResource(icon), contentDescription = null, tint = contentColor, modifier = Modifier.size(24.dp))
+        Text(
+            label,
+            color = contentColor,
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+            textAlign = TextAlign.Center
+        )
+    }
+}
+
+@Composable
+private fun BrandHeader(dark: Boolean) {
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        Image(painterResource(R.drawable.ic_launcher), null, Modifier.size(44.dp))
+        Image(
+            painterResource(if (dark) R.drawable.signal_frame_dark else R.drawable.signal_frame_light),
+            null, Modifier.size(36.dp)
+        )
         Text(stringResource(R.string.app_name), style = MaterialTheme.typography.headlineSmall, modifier = Modifier.weight(1f))
         Surface(color = MaterialTheme.colorScheme.secondaryContainer, shape = RoundedCornerShape(8.dp)) {
             Text(stringResource(R.string.preview_label), modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp),
