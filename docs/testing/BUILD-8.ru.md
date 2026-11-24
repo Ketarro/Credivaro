@@ -32,3 +32,6 @@
 - [Signed APK](https://github.com/Ketarro/Credivaro/actions/runs/45325287905/artifacts/14889192816); [reports](https://github.com/Ketarro/Credivaro/actions/runs/45325287905/artifacts/14889626802). Artifacts expire 2026-12-08 UTC; verify availability before sharing. Use signed, not temporary-debug, for updates.
 
 No additional claim about device model, Android version, accessibility coverage, encrypted storage or release readiness. Financial records remain memory-only. Synthetic data only. No screenshots or personal data attached.
+
+## Дополнительное устройство — 2026-11-24
+Samsung Galaxy A30s: установка Build 8 из Telegram не удалась («Не удалось обработать пакет»). [Issue #6](https://github.com/Ketarro/Credivaro/issues/6). Версия Android и фактический SHA-256 файла неизвестны. 21/21 относится только к прежнему устройству; успешная подпись CI не подтверждает целостность переданного файла. Открытый дефект, причина не установлена.
