@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "project_kind": "existing",
-  "status": "review",
+  "status": "approved",
   "topics": {
     "purpose": {
       "status": "resolved",
@@ -139,5 +139,10 @@
     }
   ],
   "next_step": "Итоговая редакция 1 в .ai-framework/checkpoints/INIT-001.md: выполнить --proposal, предъявить ревизию/отпечаток и получить явное итоговое подтверждение; затем --ready и отдельное согласование интеграции review-ветки/DoR первой R03.05. Реализация миграции не разрешена.",
-  "approval": null
+  "approval": {
+    "approved_by": "Владелец проекта (явный ответ в чате)",
+    "confirmed_at": "2026-11-24T16:11:11Z",
+    "evidence": "Владелец явно утвердил итоговую редакцию 1 PROJECT_ZERO, ревизия 424bca43bb30461b94fbf12afd5a807df069e323 и fingerprint, согласился с дополнительными параметрами и разрешил безопасный fast-forward документации в активную ветку без изменения main, кода и инфраструктуры. Запись подтверждения в INIT-001.md; время фиксации UTC.",
+    "fingerprint": "5c2a919aa646585845dd87f6f2a5b970755d843a68bcf6a05d0ffbbad73afa70"
+  }
 }
