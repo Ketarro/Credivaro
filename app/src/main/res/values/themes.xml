@@ -1,0 +1,6 @@
+<resources>
+    <style name="Theme.Credivaro" parent="android:style/Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">#F5F7FA</item>
+        <item name="android:windowLightStatusBar">true</item>
+    </style>
+</resources>

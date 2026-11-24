@@ -1,0 +1,16 @@
+<resources>
+    <string name="app_name">Credivaro</string>
+    <string name="tagline">Твои кредиты. Твой план. Твой контроль.</string>
+    <string name="home">Главная</string>
+    <string name="about">О приложении</string>
+    <string name="alpha_title">Предварительная сборка</string>
+    <string name="alpha_description">Первый фундамент Credivaro. Учёт обязательств, хранение, платежи и напоминания пока недоступны.</string>
+    <string name="alpha_warning">Экспериментальная сборка. Не используйте её для контроля сроков платежей или реальных финансовых данных.</string>
+    <string name="version_label">Версия %1$s</string>
+    <string name="license_label">Открытый код • Apache 2.0</string>
+    <string name="privacy_description">В этой сборке нет учётной записи, доступа к сети или финансовых записей.</string>
+    <string name="theme_label">Оформление</string>
+    <string name="theme_system">Системная</string>
+    <string name="theme_light">Светлая</string>
+    <string name="theme_dark">Тёмная</string>
+</resources>

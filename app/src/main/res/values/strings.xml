@@ -1,0 +1,16 @@
+<resources>
+    <string name="app_name">Credivaro</string>
+    <string name="tagline">Your credits. Your plan. Your control.</string>
+    <string name="home">Home</string>
+    <string name="about">About</string>
+    <string name="alpha_title">Development preview</string>
+    <string name="alpha_description">The first foundation of Credivaro. Debt tracking, storage, payments and reminders are not available yet.</string>
+    <string name="alpha_warning">Experimental build. Do not rely on it for payment deadlines or real financial data.</string>
+    <string name="version_label">Version %1$s</string>
+    <string name="license_label">Open source • Apache 2.0</string>
+    <string name="privacy_description">No account, network access or financial records in this build.</string>
+    <string name="theme_label">Appearance</string>
+    <string name="theme_system">System</string>
+    <string name="theme_light">Light</string>
+    <string name="theme_dark">Dark</string>
+</resources>
