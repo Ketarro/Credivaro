@@ -35,3 +35,5 @@ No additional claim about device model, Android version, accessibility coverage,
 
 ## Дополнительное устройство — 2026-11-24
 Samsung Galaxy A30s: установка Build 8 из Telegram не удалась («Не удалось обработать пакет»). [Issue #6](https://github.com/Ketarro/Credivaro/issues/6). Версия Android и фактический SHA-256 файла неизвестны. 21/21 относится только к прежнему устройству; успешная подпись CI не подтверждает целостность переданного файла. Открытый дефект, причина не установлена.
+
+Дополнительная совместимость: Xiaomi 17 и PILOT 3 (Android 16, Doke OS 5) успешно устанавливаются через Telegram по сообщению владельца. На PILOT 3 показан экран настроек, не полный тест. Добавлена диагностическая матрица CI; результаты ожидаются. См. [ANDROID-COMPATIBILITY.md](ANDROID-COMPATIBILITY.md).

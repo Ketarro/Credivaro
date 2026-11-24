@@ -1,0 +1,11 @@
+# Android compatibility — Issue #6
+
+Status: diagnostic CI added, results pending. Build 8 source/versionCode unchanged. No claim of fix. User reports successful Telegram installation on Xiaomi 17 and PILOT 3 (Android 16, Doke OS 5); the latter screenshot shows working Settings with three-button navigation. Samsung Galaxy A30s fails at package processing; exact Android version, APK hash and PackageManager error unknown. Device screenshots are not published.
+
+## Automated check
+Trusted push/manual workflow builds current APK, checks persistent certificate as before, then downloads that artifact into isolated emulator jobs (API 26, 28, 29, 30, 36). During Build 8, it also attempts to retrieve the exact original signed artifact from run 45325287905, artifact 14889192816, which expires 2026-12-08 UTC. If unavailable, this is reported separately and only current package tested. PR jobs retain ordinary tests/lint, no signing. Current temporary debug fallback is explicitly reported and does not validate persistent signature.
+Each APK: SHA-256 file hash, ZIP test, manifest badging, alignment, API-specific apksigner verification, persistent fingerprint check when required, clean adb install (no -t), launcher start, live process and crash log. Per-API artifacts contain outputs and logcat. Emulator provisioning failures are not app incompatibility; inspect job log. x86/x86_64 emulators do not reproduce Samsung firmware/ARM-specific behavior. Tests are clean installs, not update or Telegram tests. No signing secrets enter emulator job.
+Refs: https://developer.android.com/tools/apksigner ; https://github.com/ReactiveCircus/android-emulator-runner
+
+## Physical A30s diagnostic
+Record Android version, model variant and whether prior Credivaro exists. Try same Telegram APK saved to Downloads via My Files without uninstalling. Compare SHA-256 with exact original report (APK, not ZIP/certificate). With authorized USB debugging and Android Platform Tools, run `adb shell getprop ro.build.version.sdk`, `adb install -r path/to/credivaro.apk`, and inspect relevant PackageManager logs if needed; redact personal identifiers before sharing. Do not disable security or uninstall prior app as default workaround. No change to SDK or signing schemes until exact evidence.

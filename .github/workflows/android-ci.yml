@@ -7,6 +7,7 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
+  actions: read
 concurrency:
   group: android-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -14,6 +15,10 @@ jobs:
   debug:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    outputs:
+      signed: ${{ steps.alpha_sign.outputs.signed }}
+      apk_artifact: ${{ steps.compatibility_input.outputs.name }}
+      version_code: ${{ steps.compatibility_input.outputs.version_code }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -98,4 +103,117 @@ jobs:
           name: credivaro-v0.1.0-alpha-build8-signed
           path: ${{ runner.temp }}/credivaro-alpha/credivaro-v0.1.0-alpha-build8.apk
           if-no-files-found: error
+          retention-days: 14
+
+      - name: Select APK for compatibility checks
+        id: compatibility_input
+        env:
+          SIGNED: ${{ steps.alpha_sign.outputs.signed }}
+        run: |
+          set -euo pipefail
+          if [[ "$SIGNED" == true ]]; then
+            name=credivaro-v0.1.0-alpha-build8-signed
+            apk="$RUNNER_TEMP/credivaro-alpha/credivaro-v0.1.0-alpha-build8.apk"
+          else
+            name=credivaro-v0.1.0-alpha-build8-temporary-debug
+            apk=app/build/outputs/apk/debug/app-debug.apk
+          fi
+          badging="$("$ANDROID_HOME/build-tools/35.0.0/aapt2" dump badging "$apk")"
+          version_code="$(printf '%s\n' "$badging" | grep "^package:" | grep -o "versionCode='[0-9]*'" | cut -d "'" -f 2)"
+          test -n "$version_code"
+          echo "name=$name" >> "$GITHUB_OUTPUT"
+          echo "version_code=$version_code" >> "$GITHUB_OUTPUT"
+          sha256sum "$apk"
+
+  compatibility:
+    name: Install and launch / API ${{ matrix.api }}
+    needs: debug
+    # Trusted branch runs exercise the actual signed distribution APK, not a rebuilt debug substitute.
+    # PR builds continue to run JVM tests and lint without signing secrets.
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - api: 26
+            target: default
+            arch: x86
+          - api: 28
+            target: google_apis
+            arch: x86
+          - api: 29
+            target: google_apis
+            arch: x86
+          - api: 30
+            target: google_apis
+            arch: x86
+          - api: 36
+            target: google_apis
+            arch: x86_64
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: android-actions/setup-android@v4
+        with:
+          cmdline-tools-version: 12266719
+      - name: Install APK inspection tools
+        run: sdkmanager "build-tools;35.0.0"
+      - name: Download current run APK
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ needs.debug.outputs.apk_artifact }}
+          path: compatibility/current
+      - name: Download exact distributed Build 8 for issue 6
+        id: original
+        if: needs.debug.outputs.version_code == '8'
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: credivaro-v0.1.0-alpha-build8-signed
+          repository: Ketarro/Credivaro
+          run-id: 45325287905
+          github-token: ${{ github.token }}
+          path: compatibility/original
+      - name: Prepare diagnostics
+        env:
+          SIGNED: ${{ needs.debug.outputs.signed }}
+          ORIGINAL: ${{ steps.original.outcome }}
+        run: |
+          mkdir -p compatibility/reports
+          printf 'current_signed=%s\noriginal_download=%s\n' "$SIGNED" "$ORIGINAL" > compatibility/reports/input.txt
+          if [[ "$SIGNED" != true ]]; then
+            echo "::warning::Current APK is temporary debug; this does not validate the persistent signer."
+          fi
+          if [[ "$ORIGINAL" == failure ]]; then
+            echo "::warning::Exact original Build 8 artifact unavailable; only the current APK can be tested."
+          fi
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Install and launch APK on emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        env:
+          EXPECTED_API: ${{ matrix.api }}
+          CURRENT_SIGNED: ${{ needs.debug.outputs.signed }}
+        with:
+          api-level: ${{ matrix.api }}
+          target: ${{ matrix.target }}
+          arch: ${{ matrix.arch }}
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
+          disable-animations: true
+          script: bash scripts/android-compatibility.sh
+      - name: Upload compatibility diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: credivaro-compat-api-${{ matrix.api }}
+          path: compatibility/reports/
+          if-no-files-found: warn
           retention-days: 14
