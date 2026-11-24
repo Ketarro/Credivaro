@@ -6,4 +6,4 @@ dependencyResolutionManagement {
     repositories { google(); mavenCentral() }
 }
 rootProject.name = "Credivaro"
-include(":app", ":core:model")
+include(":app", ":core:model", ":core:database")

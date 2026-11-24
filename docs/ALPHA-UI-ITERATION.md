@@ -32,3 +32,6 @@ Build 7 push run #15 succeeded including persistent signature. Static labels, ad
 
 ## Build 8 — accepted device checks / handoff (2026-11-24)
 Maintainer reports 21/21 checks passed, no new defects reported. Push CI #17 (45325287905) and PR CI #18 (45325293847) passed for a94aba638ed3046107a4b7d606732209185ba9d2; persistent signature and signed APK upload succeeded in push run. Full checklist: [testing/BUILD-8.ru.md](testing/BUILD-8.ru.md). New living [HANDOFF.md](../HANDOFF.md) tracks active branch, decisions, verified state and next steps across chats. Next priority: Build 9 protected Room storage, starting from STORAGE-PREPARATION.md. No financial persistence or release approval yet.
+
+## Build 9 — storage stage 1
+Owner clarified Xiaomi 17 wrong-file incident; Samsung testing postponed. Added isolated Room/SQLCipher/Keystore storage module and instrumented CI tests; UI and distributed versionCode remain Build 8 pending security verification. See [STORAGE-BUILD9.md](STORAGE-BUILD9.md). No app integration or real-data approval.

@@ -1,0 +1,15 @@
+# Build 9 — protected storage stage 1 (prototype, not distributed)
+Application stays at versionCode 8: this module is deliberately not a dependency of :app. Only after verification and UI integration will a new distributed Build 9 be numbered. Owner clarified Xiaomi 17 incident was the wrong file; Samsung testing deferred, issue #6 stays open.
+
+## Dependency choice
+Room 2.8.4 (min API 23), KSP2 2.3.6, SQLCipher Android Community 4.20.0 + androidx.sqlite 2.7.0, coroutines 1.10.2. These are candidate pinned versions, compilation/runtime compatibility still pending. Modern SQLCipher supports API 23+ and four ABIs; final app native compatibility and 16 KB alignment must be checked after integration. SQLCipher third-party license/notice obligations need review and packaging before distribution. No custom cryptographic algorithm. References:
+- https://developer.android.com/jetpack/androidx/releases/room
+- https://github.com/google/ksp/releases/tag/2.3.6
+- https://www.zetetic.net/sqlcipher/sqlcipher-for-android-community/
+- https://github.com/sqlcipher/sqlcipher-android/tree/v4.20.0
+- https://developer.android.com/privacy-and-security/keystore
+
+## Implementation
+:core:database includes Room schema v1, obligation and append-only terms/snapshot revision tables, FK cascade only for explicit hard deletion, typed mapper for all existing domain fields, transactional save/delete, Flow reads. Terms are versioned JSON with monetary minor units stored as integer decimal strings; snapshot amounts are nullable SQLite INTEGER. Currency code/scale stored, mismatch fails. Revision recordedAt is technical time, not effective bank terms history; effective dates and reconciliation commands still need extension. Clearing current snapshot does not erase past rows. Schema generation configured; generated JSON must be reviewed and committed before migration baseline is accepted. No destructive migration.
+Keystore AES-256/GCM wraps a SecureRandom 32-byte secret; IV from provider, AAD binds envelope version/name, atomic file in noBackupFilesDir. Existing DB without envelope or invalidated key fails closed; no reset. SQLCipher receives base64 ASCII bytes; managed buffers cleared when possible, cannot guarantee JVM/native memory erasure. Custom factory forwards Room callbacks to SQLCipher SQLiteOpenHelper and supplies explicit non-deleting corruption handler (upstream SupportHelper defaults to null handler). Single-process, one owner per DB, prototype; no automatic recovery or app lock.
+Four instrumented tests cover type round-trip/reopen, revision history/rollback/cascade, wrong key and plaintext read on disposable copy, missing/tampered envelope. CI separate storage matrix API 26/36; existing signed APK install matrix preserved. No results yet. Must review test reports, schema, dependency compatibility, corruption behavior and add migration/backup/key invalidation/physical ARM tests before enabling real data. Production UI remains memory-only and synthetic-only. No release, main merge, signing change or application version increase.
