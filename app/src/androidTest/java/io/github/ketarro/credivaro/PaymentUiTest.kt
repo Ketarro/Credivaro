@@ -24,8 +24,10 @@ class PaymentUiTest {
     @Test fun recordAndReadPaymentAfterRecreate() {
         val title = "Synthetic payment " + UUID.randomUUID().toString().take(8)
         val note = "Synthetic payment note " + UUID.randomUUID().toString().take(8)
-        waitText(label(R.string.add_obligation))
+        // The dashboard only offers Add when no obligations exist. Navigate independently.
+        waitText(label(R.string.obligations_nav))
         rule.onNodeWithText(label(R.string.obligations_nav)).activate()
+        waitText(label(R.string.add_obligation))
         rule.onNodeWithText(label(R.string.add_obligation)).activate()
         rule.onNodeWithTag("field-${R.string.field_title}").performScrollTo()
             .performSemanticsAction(SemanticsActions.SetText) { check(it(AnnotatedString(title))) }
@@ -40,7 +42,10 @@ class PaymentUiTest {
             .performSemanticsAction(SemanticsActions.SetText) { check(it(AnnotatedString(note))) }
         rule.onNodeWithTag("save-payment").activate()
         waitText(note)
+        // Dialog dismissal and IME insets may settle asynchronously on API 26.
+        waitText(label(R.string.home))
         rule.onNodeWithText(label(R.string.home)).activate()
+        waitText(label(R.string.obligations_nav))
         rule.onNodeWithText(label(R.string.obligations_nav)).activate()
         waitText(title)
         rule.activityRule.scenario.recreate()

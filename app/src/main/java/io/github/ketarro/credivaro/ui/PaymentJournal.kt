@@ -8,6 +8,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
@@ -124,6 +126,8 @@ private fun PaymentEntryDialog(obligation: Obligation, repository: PaymentReposi
             }
         },
         confirmButton = {
+            val focus = LocalFocusManager.current
+            val keyboard = LocalSoftwareKeyboardController.current
             TextButton(enabled = !busy, modifier = Modifier.testTag("save-payment"), onClick = {
                 val value = pending ?: runCatching {
                     buildPayment(obligation, UUID.randomUUID(), UUID.randomUUID(), date, amount,
@@ -132,6 +136,8 @@ private fun PaymentEntryDialog(obligation: Obligation, repository: PaymentReposi
                 if (value == null) {
                     invalid = true
                 } else {
+                    focus.clearFocus(force = true)
+                    keyboard?.hide()
                     invalid = false
                     pending = value
                     failed = false
@@ -151,7 +157,15 @@ private fun PaymentEntryDialog(obligation: Obligation, repository: PaymentReposi
                 }
             }) { Text(stringResource(R.string.save)) }
         },
-        dismissButton = { TextButton(enabled = !busy, onClick = close) { Text(stringResource(R.string.cancel)) } }
+        dismissButton = {
+            val focus = LocalFocusManager.current
+            val keyboard = LocalSoftwareKeyboardController.current
+            TextButton(enabled = !busy, onClick = {
+                focus.clearFocus(force = true)
+                keyboard?.hide()
+                close()
+            }) { Text(stringResource(R.string.cancel)) }
+        }
     )
 }
 

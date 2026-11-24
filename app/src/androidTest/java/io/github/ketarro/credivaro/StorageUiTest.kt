@@ -23,7 +23,8 @@ class StorageUiTest {
 
     @Test fun saveRecreateReadAndDelete() {
         val title = "Synthetic UI " + UUID.randomUUID().toString().take(8)
-        waitFor(label(R.string.add_obligation))
+        // A previous failed test may leave a synthetic record; dashboard Add is conditional.
+        waitFor(label(R.string.obligations_nav))
         rule.onNodeWithText(label(R.string.obligations_nav)).activate()
         waitFor(label(R.string.add_obligation))
         rule.onNodeWithText(label(R.string.add_obligation)).activate()
@@ -31,6 +32,7 @@ class StorageUiTest {
         rule.onNodeWithTag("save-obligation").performScrollTo().activate()
         waitFor(title)
         waitFor(label(R.string.edit_obligation))
+        waitFor(label(R.string.home))
         rule.onNodeWithText(label(R.string.home)).activate()
         rule.onNodeWithText(label(R.string.obligations_nav)).activate()
         waitFor(title)

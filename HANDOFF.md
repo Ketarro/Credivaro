@@ -15,6 +15,8 @@ CI #45479966371 (SHA 0097fc30): Gradle compilation/lint/JVM tests PASS, instrume
 
 Build 12 UI candidate (R04.02/R04.03): журнал фактических платежей в карточке обязательства, форма даты/суммы/частей/примечания RU/EN; остаток явно unallocated, банковский снимок не меняется. Повтор после ошибки использует тот же operationId; hard-delete предупреждает об удалении платежей. Добавлены 10 JVM unit tests и 1 UI instrumentation test; CI ещё не получен. Корректировки, события, расчётный остаток, recovery, исполнение UI instrumentation и review впереди; версия 11, подписанного Build 12 нет. Ручная приёмка отложена. 17/68.
 
+CI #54 (45485443922, e968bf9): debug compile/JVM/lint/schema PASS, API36 PASS; API26 7 storage tests PASS, 2/4 app UI PASS. PaymentUiTest: Home node absent after saving payment; StorageUiTest: timeout 30s, exact wait not identified in log. Likely IME transition and conditional dashboard Add (leftover synthetic fixture), not proven root causes. Candidate fix: clear focus/hide IME on valid payment save and cancel, wait for navigation after dialog dismissal, start both UI tests through obligations nav without assuming empty DB. All original assertions and 30s limits retained. Re-run required; R09.03 open. 17/68, no signed APK.
+
 ## 0. Обязательная дорожная карта
 - [ROADMAP.md](ROADMAP.md) — единый план выпуска v0.1.0-alpha, обязательное чтение до работы; [AGENTS.md](AGENTS.md) — правила.
 - Прогресс ROADMAP: **17/68 (25.0%)**.
