@@ -37,6 +37,7 @@ class EncryptedStorage private constructor(
     private val db: StorageDatabase, private val password: ByteArray, clock: Clock
 ) : Closeable {
     val repository = ObligationRepository(db, clock)
+    val payments = PaymentRepository(db, clock)
     override fun close() {
         try { db.close() } finally { password.fill(0) }
     }
@@ -50,6 +51,7 @@ class EncryptedStorage private constructor(
         private fun buildRoom(context: Context, name: String, password: ByteArray): StorageDatabase =
             Room.databaseBuilder(context, StorageDatabase::class.java, name)
                 .openHelperFactory(PreserveFileFactory(password))
+                .addMigrations(PAYMENT_MIGRATION_1_2)
                 .setJournalMode(RoomDatabase.JournalMode.TRUNCATE)
                 .build()
 

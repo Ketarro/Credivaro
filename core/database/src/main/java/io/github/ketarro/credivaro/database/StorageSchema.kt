@@ -66,8 +66,9 @@ internal interface StorageDao {
     suspend fun delete(id: String): Int
 }
 
-@Database(entities = [ObligationRow::class, TermsRow::class, SnapshotRow::class],
-    version = 1, exportSchema = true)
+@Database(entities = [ObligationRow::class, TermsRow::class, SnapshotRow::class, PaymentRow::class],
+    version = 2, exportSchema = true)
 internal abstract class StorageDatabase : RoomDatabase() {
     abstract fun dao(): StorageDao
+    abstract fun paymentDao(): PaymentDao
 }
