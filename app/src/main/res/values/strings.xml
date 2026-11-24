@@ -4,11 +4,11 @@
     <string name="home">Home</string>
     <string name="about">About</string>
     <string name="alpha_title">Development preview</string>
-    <string name="alpha_description">The first foundation of Credivaro. Debt tracking, storage, payments and reminders are not available yet.</string>
+    <string name="alpha_description">Obligations and encrypted local test storage are available. Payments and reminders are not available yet.</string>
     <string name="alpha_warning">Experimental build. Do not rely on it for payment deadlines or real financial data.</string>
     <string name="version_label">Version %1$s</string>
     <string name="license_label">Open source • Apache 2.0</string>
-    <string name="privacy_description">No account or network access. Test financial records remain in memory only.</string>
+    <string name="privacy_description">No account or network access. Test records are stored in an encrypted local database.</string>
     <string name="theme_label">Appearance</string>
     <string name="theme_system">System</string>
     <string name="theme_light">Light</string>
@@ -22,9 +22,9 @@
     <string name="information">Information</string>
     <string name="preview_label">ALPHA PREVIEW</string>
     <string name="welcome_title">Your finances, in one place</string>
-    <string name="welcome_description">Debt tracking is coming in the next development iterations.</string>
+    <string name="welcome_description">Manage fictional obligations during testing.</string>
     <string name="privacy_title">Local-first by design</string>
-    <string name="privacy_short">No account or financial records in this build.</string>
+    <string name="privacy_short">Test records stay on this device.</string>
     <string name="alpha_short">For testing only. Do not enter real financial data.</string>
     <string name="build_label">Build %1$d</string>
     <string name="about_summary">Version, license and development status</string>
@@ -35,11 +35,11 @@
     <string name="cancel">Cancel</string>
     <string name="obligations_nav">Debts</string>
     <string name="obligations_title">Obligations</string>
-    <string name="preview_session">Test only. Records are held in memory and may disappear when the app closes or the screen is recreated. Use fictional data.</string>
+    <string name="preview_session">Test only. Records persist in encrypted local storage. Use fictional data.</string>
     <string name="add_obligation">Add obligation</string>
     <string name="edit_obligation">Edit obligation</string>
     <string name="delete_obligation">Delete obligation</string>
-    <string name="delete_confirm">Delete this test record?</string>
+    <string name="delete_confirm">Permanently delete this test record and its stored history?</string>
     <string name="delete">Delete</string>
     <string name="save">Save</string>
     <string name="loan_type">Loan</string>
@@ -69,7 +69,7 @@
     <string name="preview_overflow">Total exceeds supported range</string>
     <string name="field_amount_hint">Decimal point or comma; no grouping</string>
     <string name="preview_bank_zone">Test dates use the device time zone.</string>
-    <string name="privacy_preview">No account or network access. Test financial records remain in memory only.</string>
+    <string name="privacy_preview">No account or network access. Test records are stored in an encrypted local database.</string>
     <string name="language_short">Language</string>
     <string name="system_short">Auto</string>
     <string name="form_lender">Lender</string>
@@ -92,4 +92,10 @@
     <string name="field_notes">Notes</string>
     <string name="preview_currency_overflow">%1$s: total exceeds supported range</string>
     <plurals name="obligation_count"><item quantity="one">%d obligation</item><item quantity="other">%d obligations</item></plurals>
+    <string name="storage_loading">Opening secure storage…</string>
+    <string name="storage_unavailable">Storage is unavailable. Existing data has not been intentionally erased. Retry or contact support; do not clear app data.</string>
+    <string name="storage_retry">Retry</string>
+    <string name="storage_working">Saving changes…</string>
+    <string name="storage_write_error">Could not save changes. Try again. Do not clear app data.</string>
+    <string name="third_party_licenses">Third-party licenses — SQLCipher</string>
 </resources>

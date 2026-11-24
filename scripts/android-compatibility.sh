@@ -16,6 +16,8 @@ check_one() (
   local_kind="$1"
   apk="$2"
   require_signed="$3"
+  expected_code="$4"
+  mode="${5:-clean}"
   dest="$report/$local_kind"
   mkdir -p "$dest"
   # Collect diagnostics before emulator teardown, including exact PackageManager errors.
@@ -25,7 +27,7 @@ check_one() (
   "$tools/aapt2" dump badging "$apk" | tee "$dest/badging.txt"
   "$tools/zipalign" -c -v 4 "$apk" > "$dest/alignment.txt"
   "$tools/apksigner" verify --verbose --print-certs --min-sdk-version "$api" --max-sdk-version "$api" "$apk" | tee "$dest/signature.txt"
-  grep -F "package: name='$pkg'" "$dest/badging.txt"
+  grep -F "package: name='$pkg'" "$dest/badging.txt" | grep -F "versionCode='$expected_code'"
   if [[ "$require_signed" == true ]]; then
     grep -Fx "Signer #1 certificate SHA-256 digest: $fingerprint" "$dest/signature.txt"
   fi
@@ -43,9 +45,13 @@ check_one() (
     echo "INFRASTRUCTURE: logcat buffers could not be cleared" | tee "$dest/result.txt"
     exit 2
   fi
-  # Force a clean install on this isolated emulator only.
-  if adb shell pm path "$pkg" | grep -q '^package:'; then adb uninstall "$pkg"; fi
-  adb install "$apk" 2>&1 | tee "$dest/install.txt"
+  # Clean installs only on this isolated emulator; upgrade preserves the sandbox.
+  if [[ "$mode" == upgrade ]]; then
+    adb install -r "$apk" 2>&1 | tee "$dest/install.txt"
+  else
+    if adb shell pm path "$pkg" | grep -q '^package:'; then adb uninstall "$pkg"; fi
+    adb install "$apk" 2>&1 | tee "$dest/install.txt"
+  fi
   grep -q '^Success' "$dest/install.txt"
   adb shell pm path "$pkg" | tee "$dest/package-path.txt"
   adb shell am start -W -n "$pkg/.MainActivity" | tee "$dest/launch.txt"
@@ -79,9 +85,26 @@ for kind in original current; do
   signed="$CURRENT_SIGNED"
   [[ "$kind" != original ]] || signed=true
   set +e
-  bash -c 'check_one "$@"' _ "$kind" "${apks[0]}" "$signed"
+  expected="$EXPECTED_VERSION_CODE"
+  [[ "$kind" != original ]] || expected=8
+  bash -c 'check_one "$@"' _ "$kind" "${apks[0]}" "$signed" "$expected"
   rc=$?
   set -e
   if [[ "$rc" != 0 ]]; then status=1; fi
 done
+# Update the known persistent Build 8 certificate to the current signed APK.
+# No physical user data exists in this CI sandbox.
+if [[ "$status" == 0 && "$CURRENT_SIGNED" == true && "$EXPECTED_VERSION_CODE" == 9 ]]; then
+  mapfile -t originals < <(find compatibility/original -type f -name '*.apk' 2>/dev/null || true)
+  mapfile -t currents < <(find compatibility/current -type f -name '*.apk' 2>/dev/null || true)
+  if [[ "${#originals[@]}" == 1 && "${#currents[@]}" == 1 ]]; then
+    bash -c 'check_one "$@"' _ upgrade-baseline "${originals[0]}" true 8
+    adb shell "run-as $pkg sh -c 'mkdir -p files && echo ci-update-marker > files/ci-update-marker'"
+    bash -c 'check_one "$@"' _ upgrade "${currents[0]}" true "$EXPECTED_VERSION_CODE" upgrade
+    adb shell "run-as $pkg cat files/ci-update-marker" | tr -d '\r' | grep -Fx ci-update-marker
+    echo "PASS signed update and retained sandbox API $api" | tee "$report/upgrade/result.txt"
+  else
+    echo "Update test skipped: baseline unavailable" | tee "$report/upgrade-skipped.txt"
+  fi
+fi
 exit "$status"

@@ -20,6 +20,10 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.window.DialogProperties
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
@@ -149,24 +153,58 @@ private fun ObligationListCard(item: Obligation, open: () -> Unit) {
 }
 
 @Composable
-fun ObligationPreview(records: MutableList<Obligation>) {
+fun ObligationPreview(
+    records: List<Obligation>,
+    saveRecord: suspend (Obligation) -> Unit,
+    deleteRecord: suspend (UUID) -> Unit
+) {
     var editor by remember { mutableStateOf(false) }
     var editing by remember { mutableStateOf<Obligation?>(null) }
     var detailId by remember { mutableStateOf<UUID?>(null) }
     var deleting by remember { mutableStateOf(false) }
-    val detail = records.firstOrNull { it.id == detailId }
-    BackHandler(editor || detailId != null) {
-        if (editor) editor = false else detailId = null
+    var busy by remember { mutableStateOf(false) }
+    var writeFailed by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+    fun write(operation: suspend () -> Unit, onSuccess: () -> Unit) {
+        if (busy) return
+        busy = true
+        writeFailed = false
+        scope.launch {
+            try {
+                operation()
+                onSuccess()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                writeFailed = true
+            } finally {
+                busy = false
+            }
+        }
     }
+    val detail = records.firstOrNull { it.id == detailId }
+    BackHandler(busy || editor || detailId != null) {
+        if (!busy) {
+            writeFailed = false
+            if (editor) editor = false else detailId = null
+        }
+    }
+    if (busy) AlertDialog(
+        onDismissRequest = {},
+        properties = DialogProperties(dismissOnBackPress = false, dismissOnClickOutside = false),
+        text = { Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+            CircularProgressIndicator(Modifier.size(24.dp))
+            Text(stringResource(R.string.storage_working))
+        } },
+        confirmButton = {}
+    )
     if (editor) {
-        PreviewEditor(editing, onCancel = { editor = false }) { value ->
-            val index = records.indexOfFirst { it.id == value.id }
-            if (index >= 0) records[index] = value else records.add(value)
-            detailId = value.id
-            editor = false
+        PreviewEditor(editing, busy = busy, writeFailed = writeFailed,
+            onCancel = { if (!busy) { editor = false; writeFailed = false } }) { value ->
+            write({ saveRecord(value) }) { detailId = value.id; editor = false }
         }
     } else if (detail != null) {
-        TextButton(onClick = { detailId = null }) { Text(stringResource(R.string.back)) }
+        TextButton(onClick = { detailId = null; writeFailed = false }) { Text(stringResource(R.string.back)) }
         Text(detail.title, style = MaterialTheme.typography.headlineSmall)
         Card {
             Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -195,16 +233,21 @@ fun ObligationPreview(records: MutableList<Obligation>) {
                 }
             }
         }
-        Button(onClick = { editing = detail; editor = true }, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.edit_obligation)) }
-        TextButton(onClick = { deleting = true }) { Text(stringResource(R.string.delete_obligation), color = MaterialTheme.colorScheme.error) }
+        if (writeFailed) Text(stringResource(R.string.storage_write_error), color = MaterialTheme.colorScheme.error)
+        Button(onClick = { editing = detail; editor = true; writeFailed = false }, enabled = !busy, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.edit_obligation)) }
+        TextButton(onClick = { deleting = true; writeFailed = false }, enabled = !busy) { Text(stringResource(R.string.delete_obligation), color = MaterialTheme.colorScheme.error) }
         if (deleting) AlertDialog(onDismissRequest = { deleting = false },
             title = { Text(stringResource(R.string.delete_obligation)) },
             text = { Text(stringResource(R.string.delete_confirm)) },
-            confirmButton = { TextButton(onClick = { records.removeAll { it.id == detail.id }; detailId = null; deleting = false }) { Text(stringResource(R.string.delete)) } },
+            confirmButton = { TextButton(onClick = {
+                deleting = false
+                write({ deleteRecord(detail.id) }) { detailId = null }
+            }) { Text(stringResource(R.string.delete)) } },
             dismissButton = { TextButton(onClick = { deleting = false }) { Text(stringResource(R.string.cancel)) } })
     } else {
         Text(stringResource(R.string.obligations_title), style = MaterialTheme.typography.headlineSmall, modifier = Modifier.semantics { heading() })
-        Button(onClick = { editing = null; editor = true }, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.add_obligation)) }
+        if (writeFailed) Text(stringResource(R.string.storage_write_error), color = MaterialTheme.colorScheme.error)
+        Button(onClick = { editing = null; editor = true; writeFailed = false }, enabled = !busy, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.add_obligation)) }
         if (records.isEmpty()) Text(stringResource(R.string.empty_obligations))
         records.forEach { item -> ObligationListCard(item) { detailId = item.id } }
         PreviewNotice()
@@ -212,7 +255,7 @@ fun ObligationPreview(records: MutableList<Obligation>) {
 }
 
 @Composable
-private fun PreviewEditor(existing: Obligation?, onCancel: () -> Unit, onSave: (Obligation) -> Unit) {
+private fun PreviewEditor(existing: Obligation?, busy: Boolean, writeFailed: Boolean, onCancel: () -> Unit, onSave: (Obligation) -> Unit) {
     var type by remember { mutableStateOf(existing?.type ?: ObligationType.LOAN) }
     var title by remember { mutableStateOf(existing?.title.orEmpty()) }
     var lender by remember { mutableStateOf(existing?.lender.orEmpty()) }
@@ -301,7 +344,8 @@ private fun PreviewEditor(existing: Obligation?, onCancel: () -> Unit, onSave: (
         }
     }
     if (error) Text(stringResource(R.string.invalid_fields), color = MaterialTheme.colorScheme.error)
-    Button(modifier = Modifier.fillMaxWidth(), onClick = {
+    if (writeFailed) Text(stringResource(R.string.storage_write_error), color = MaterialTheme.colorScheme.error)
+    Button(modifier = Modifier.fillMaxWidth().testTag("save-obligation"), enabled = !busy, onClick = {
         val result = runCatching {
             val c = Currency.getInstance(currency)
             val zone = existing?.bankZone ?: ZoneId.systemDefault()
@@ -328,7 +372,7 @@ private fun PreviewEditor(existing: Obligation?, onCancel: () -> Unit, onSave: (
         }.getOrNull()
         if (result == null) error = true else { focusManager.clearFocus(); onSave(result) }
     }) { Text(stringResource(R.string.save)) }
-    TextButton(onClick = { focusManager.clearFocus(); onCancel() }) { Text(stringResource(R.string.cancel)) }
+    TextButton(enabled = !busy, onClick = { focusManager.clearFocus(); onCancel() }) { Text(stringResource(R.string.cancel)) }
 }
 
 @Composable
@@ -361,7 +405,7 @@ private fun StaticField(value: String, update: (String) -> Unit, label: Int,
     Column(Modifier.fillMaxWidth().bringIntoViewRequester(requester), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Text(if (optional) title else "$title *", Modifier.clearAndSetSemantics {}, style = MaterialTheme.typography.bodyMedium)
         OutlinedTextField(value = value, onValueChange = update,
-            modifier = Modifier.fillMaxWidth().onFocusChanged { focused = it.isFocused }
+            modifier = Modifier.fillMaxWidth().testTag("field-$label").onFocusChanged { focused = it.isFocused }
                 .semantics { contentDescription = accessibleLabel },
             singleLine = true, shape = RoundedCornerShape(12.dp),
             keyboardOptions = KeyboardOptions(keyboardType = keyboardType, imeAction = ImeAction.Next),

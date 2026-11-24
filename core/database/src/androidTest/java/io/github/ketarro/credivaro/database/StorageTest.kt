@@ -115,6 +115,18 @@ class StorageTest {
         EncryptedStorage.open(context, name, clock).use { assertEquals(original, it.repository.find(original.id)) }
     }
 
+    @Test fun lostKeystoreKeyDoesNotResetDatabase() = runBlocking {
+        EncryptedStorage.open(context, name, clock).use { it.repository.save(record()) }
+        val db = context.getDatabasePath(name)
+        val before = db.readBytes()
+        val envelope = DatabaseKey.envelope(context, name)
+        val wrapped = envelope.readBytes()
+        KeyStore.getInstance("AndroidKeyStore").apply { load(null); deleteEntry(DatabaseKey.alias(name)) }
+        assertTrue(runCatching { EncryptedStorage.open(context, name, clock).close() }.isFailure)
+        assertArrayEquals(before, db.readBytes())
+        assertArrayEquals(wrapped, envelope.readBytes())
+    }
+
     @Test fun missingOrTamperedEnvelopeFailsClosed() = runBlocking {
         EncryptedStorage.open(context, name, clock).use { it.repository.save(record()) }
         val db = context.getDatabasePath(name)

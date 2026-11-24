@@ -4,7 +4,10 @@ import android.os.Bundle
 import android.content.res.Configuration
 import android.content.res.Resources
 import androidx.compose.foundation.clickable
-import io.github.ketarro.credivaro.model.Obligation
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.flow.collect
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import android.util.Log
 import android.graphics.drawable.ColorDrawable
 import androidx.compose.foundation.background
@@ -69,13 +72,28 @@ class MainActivity : AppCompatActivity() {
             val systemLanguage = remember(configuration) {
                 Resources.getSystem().configuration.locales[0]
             }
-            val records = remember { mutableStateListOf<Obligation>() }
+            var storageState by remember { mutableStateOf<StorageState>(StorageState.Loading) }
+            var retry by remember { mutableIntStateOf(0) }
+            LaunchedEffect(retry) {
+                storageState = StorageState.Loading
+                try {
+                    val repository = StorageSession.repository(applicationContext)
+                    repository.observeAll().collect { storageState = StorageState.Ready(repository, it) }
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (_: Exception) {
+                    storageState = StorageState.Failed
+                } catch (_: LinkageError) {
+                    storageState = StorageState.Failed
+                }
+            }
             CredivaroTheme(dark) {
                 AlphaScreen(
                     dark = dark,
                     systemDark = systemDark,
                     systemLanguage = systemLanguage,
-                    records = records,
+                    storageState = storageState,
+                    onRetryStorage = { retry++ },
                     appearance = appearance,
                     onAppearance = { value ->
                         preferences.edit().putString("mode", value.stored).apply()
@@ -117,7 +135,8 @@ private fun AlphaScreen(
     dark: Boolean,
     systemDark: Boolean,
     systemLanguage: java.util.Locale,
-    records: MutableList<Obligation>,
+    storageState: StorageState,
+    onRetryStorage: () -> Unit,
     appearance: Appearance, onAppearance: (Appearance) -> Unit,
     language: AppLanguage, onLanguage: (AppLanguage) -> Unit
 ) {
@@ -125,6 +144,7 @@ private fun AlphaScreen(
     var about by rememberSaveable { mutableStateOf(false) }
     var obligations by rememberSaveable { mutableStateOf(false) }
     var dialog by rememberSaveable { mutableStateOf("") }
+    var showLicenses by rememberSaveable { mutableStateOf(false) }
     BackHandler(settings || about || obligations) {
         if (about) about = false else { settings = false; obligations = false }
     }
@@ -161,8 +181,19 @@ private fun AlphaScreen(
                         HorizontalDivider(color = colors.outlineVariant)
                         Text(stringResource(R.string.license_label))
                         Text(stringResource(R.string.about_description), color = colors.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
+                        TextButton(onClick = { showLicenses = true }) { Text(stringResource(R.string.third_party_licenses)) }
                     }
                     AlphaNotice()
+                    if (showLicenses) {
+                        val context = LocalContext.current
+                        val license = remember(context) {
+                            context.resources.openRawResource(R.raw.sqlcipher_license).bufferedReader().use { it.readText() }
+                        }
+                        AlertDialog(onDismissRequest = { showLicenses = false },
+                            title = { Text(stringResource(R.string.third_party_licenses)) },
+                            text = { Text(license, Modifier.heightIn(max = 360.dp).verticalScroll(rememberScrollState())) },
+                            confirmButton = { TextButton(onClick = { showLicenses = false }) { Text(stringResource(R.string.back)) } })
+                    }
                 } else if (settings) {
                     Text(stringResource(R.string.settings), style = MaterialTheme.typography.headlineSmall)
                     SectionTitle(R.string.personalization)
@@ -191,12 +222,31 @@ private fun AlphaScreen(
                             Icon(painterResource(R.drawable.ic_chevron), null, tint = colors.onSurfaceVariant)
                         }
                     }
-                } else if (obligations) {
-                    ObligationPreview(records)
                 } else {
-                    BrandHeader(dark)
-                    Text(stringResource(R.string.tagline), color = colors.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
-                    PreviewDashboard(records) { obligations = true; settings = false; about = false }
+                    if (!obligations) {
+                        BrandHeader(dark)
+                        Text(stringResource(R.string.tagline), color = colors.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
+                    }
+                    when (storageState) {
+                        StorageState.Loading -> {
+                            CircularProgressIndicator(Modifier.size(28.dp))
+                            Text(stringResource(R.string.storage_loading))
+                        }
+                        StorageState.Failed -> {
+                            Text(stringResource(R.string.storage_unavailable), color = colors.error,
+                                modifier = Modifier.testTag("storage-error"))
+                            Button(onClick = onRetryStorage) { Text(stringResource(R.string.storage_retry)) }
+                        }
+                        is StorageState.Ready -> {
+                            if (obligations) {
+                                ObligationPreview(storageState.records,
+                                    saveRecord = { storageState.repository.save(it) },
+                                    deleteRecord = { check(storageState.repository.delete(it)) })
+                            } else {
+                                PreviewDashboard(storageState.records) { obligations = true; settings = false; about = false }
+                            }
+                        }
+                    }
                 }
             }
         }

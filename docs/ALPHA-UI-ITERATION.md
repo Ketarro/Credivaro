@@ -35,3 +35,6 @@ Maintainer reports 21/21 checks passed, no new defects reported. Push CI #17 (45
 
 ## Build 9 — storage stage 1
 Owner clarified Xiaomi 17 wrong-file incident; Samsung testing postponed. Added isolated Room/SQLCipher/Keystore storage module and instrumented CI tests; UI and distributed versionCode remain Build 8 pending security verification. See [STORAGE-BUILD9.md](STORAGE-BUILD9.md). No app integration or real-data approval.
+
+## Build 9 — stage 2 (integration)
+Stage 1 CI #29/#30 passed, eight instrumented checks across API 26/36. App now connects to encrypted repository and Flow, shows loading/failure without empty fallback, saves/deletes only after transaction success. VersionCode 9, same versionName/signer, original Build 8 update smoke with sandbox marker on compatible emulators when baseline available. New UI test and key-loss test, SQLCipher license in About, APK checksum sidecar. CI pending; test records only. Samsung issue #6 remains open. See STORAGE-BUILD9.md.

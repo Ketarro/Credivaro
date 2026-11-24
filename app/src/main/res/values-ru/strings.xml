@@ -4,11 +4,11 @@
     <string name="home">Главная</string>
     <string name="about">О приложении</string>
     <string name="alpha_title">Предварительная сборка</string>
-    <string name="alpha_description">Первый фундамент Credivaro. Учёт обязательств, хранение, платежи и напоминания пока недоступны.</string>
+    <string name="alpha_description">Учёт обязательств и зашифрованное локальное тестовое хранилище доступны. Платежи и напоминания пока недоступны.</string>
     <string name="alpha_warning">Экспериментальная сборка. Не используйте её для контроля сроков платежей или реальных финансовых данных.</string>
     <string name="version_label">Версия %1$s</string>
     <string name="license_label">Открытый код • Apache 2.0</string>
-    <string name="privacy_description">Без аккаунта и доступа к сети. Тестовые финансовые записи остаются только в памяти.</string>
+    <string name="privacy_description">Без аккаунта и доступа к сети. Тестовые записи хранятся в зашифрованной локальной базе.</string>
     <string name="theme_label">Оформление</string>
     <string name="theme_system">Системная</string>
     <string name="theme_light">Светлая</string>
@@ -22,9 +22,9 @@
     <string name="information">Информация</string>
     <string name="preview_label">ALPHA</string>
     <string name="welcome_title">Финансы под контролем</string>
-    <string name="welcome_description">Учёт обязательств появится в следующих итерациях разработки.</string>
+    <string name="welcome_description">Управляйте вымышленными обязательствами в тестовом режиме.</string>
     <string name="privacy_title">Локальное приложение</string>
-    <string name="privacy_short">В этой сборке нет аккаунта и финансовых записей.</string>
+    <string name="privacy_short">Тестовые записи остаются на устройстве.</string>
     <string name="alpha_short">Только для тестирования. Не вводите реальные финансовые данные.</string>
     <string name="build_label">Сборка %1$d</string>
     <string name="about_summary">Версия, лицензия и состояние разработки</string>
@@ -35,11 +35,11 @@
     <string name="cancel">Отмена</string>
     <string name="obligations_nav">Долги</string>
     <string name="obligations_title">Обязательства</string>
-    <string name="preview_session">Тестовый режим. Записи хранятся в памяти и могут исчезнуть при закрытии или пересоздании экрана. Используйте вымышленные данные.</string>
+    <string name="preview_session">Тестовый режим. Записи сохраняются в зашифрованном локальном хранилище. Используйте вымышленные данные.</string>
     <string name="add_obligation">Добавить обязательство</string>
     <string name="edit_obligation">Редактировать</string>
     <string name="delete_obligation">Удалить обязательство</string>
-    <string name="delete_confirm">Удалить эту тестовую запись?</string>
+    <string name="delete_confirm">Безвозвратно удалить эту тестовую запись и её историю?</string>
     <string name="delete">Удалить</string>
     <string name="save">Сохранить</string>
     <string name="loan_type">Кредит</string>
@@ -69,7 +69,7 @@
     <string name="preview_overflow">Итог превышает допустимый диапазон</string>
     <string name="field_amount_hint">Точка или запятая, без разделителей разрядов</string>
     <string name="preview_bank_zone">Тестовые даты используют часовой пояс устройства.</string>
-    <string name="privacy_preview">Без аккаунта и доступа к сети. Тестовые финансовые записи остаются только в памяти.</string>
+    <string name="privacy_preview">Без аккаунта и доступа к сети. Тестовые записи хранятся в зашифрованной локальной базе.</string>
     <string name="language_short">Язык</string>
     <string name="system_short">Авто</string>
     <string name="form_lender">Кредитор</string>
@@ -92,4 +92,10 @@
     <string name="field_notes">Примечание</string>
     <string name="preview_currency_overflow">%1$s: итог превышает допустимый диапазон</string>
     <plurals name="obligation_count"><item quantity="one">%d обязательство</item><item quantity="few">%d обязательства</item><item quantity="many">%d обязательств</item><item quantity="other">%d обязательства</item></plurals>
+    <string name="storage_loading">Открываем защищённое хранилище…</string>
+    <string name="storage_unavailable">Хранилище недоступно. Автоматическое удаление данных не выполняется. Повторите попытку или обратитесь в поддержку; не очищайте данные приложения.</string>
+    <string name="storage_retry">Повторить</string>
+    <string name="storage_working">Сохраняем изменения…</string>
+    <string name="storage_write_error">Не удалось сохранить изменения. Повторите попытку. Не очищайте данные приложения.</string>
+    <string name="third_party_licenses">Лицензии сторонних компонентов — SQLCipher</string>
 </resources>

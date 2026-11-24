@@ -10,7 +10,8 @@ android {
         applicationId = "io.github.ketarro.credivaro"
         minSdk = 26
         targetSdk = 36
-        versionCode = 8
+        versionCode = 9
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         versionName = "0.1.0-alpha"
         resourceConfigurations += listOf("en", "ru")
     }
@@ -23,6 +24,12 @@ android {
 kotlin { jvmToolchain(17) }
 dependencies {
     implementation(project(":core:model"))
+    implementation(project(":core:database"))
+    implementation(libs.kotlinx.coroutines.android)
+    androidTestImplementation(platform(libs.androidx.compose.bom))
+    androidTestImplementation(libs.compose.test.junit4)
+    androidTestImplementation(libs.androidx.test.runner)
+    androidTestImplementation(libs.androidx.test.junit)
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.appcompat)
     testImplementation(libs.junit)

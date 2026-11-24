@@ -35,7 +35,9 @@ jobs:
       - name: Install Android SDK
         run: sdkmanager "platforms;android-36" "build-tools;35.0.0"
       - name: Check and build
-        run: gradle --no-daemon :core:model:test :app:lintDebug :app:testDebugUnitTest :app:assembleDebug :core:database:lintDebug :core:database:assembleDebugAndroidTest
+        run: gradle --no-daemon :core:model:test :app:lintDebug :app:testDebugUnitTest :app:assembleDebug :core:database:lintDebug :core:database:assembleDebugAndroidTest :app:assembleDebugAndroidTest
+      - name: Print generated Room schema for review
+        run: find core/database/schemas -type f -name '*.json' -print -exec cat {} +
       - name: Upload test and lint reports
         if: always()
         uses: actions/upload-artifact@v4
@@ -52,7 +54,7 @@ jobs:
       - name: Upload temporary debug APK (clean installs only)
         uses: actions/upload-artifact@v4
         with:
-          name: credivaro-v0.1.0-alpha-build8-temporary-debug
+          name: credivaro-v0.1.0-alpha-build9-temporary-debug
           path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 14
@@ -83,7 +85,7 @@ jobs:
           unset ALPHA_KEYSTORE_B64
           apksigner="${ANDROID_HOME}/build-tools/35.0.0/apksigner"
           mkdir -p "$RUNNER_TEMP/credivaro-alpha"
-          output="$RUNNER_TEMP/credivaro-alpha/credivaro-v0.1.0-alpha-build8.apk"
+          output="$RUNNER_TEMP/credivaro-alpha/credivaro-v0.1.0-alpha-build9.apk"
           "$apksigner" sign --ks "$key_dir/alpha.p12" --ks-type PKCS12 \
             --ks-key-alias credivaro-alpha --ks-pass env:ALPHA_KEYSTORE_PASSWORD \
             --key-pass env:ALPHA_KEYSTORE_PASSWORD --out "$output" \
@@ -96,14 +98,17 @@ jobs:
             echo "::error::Alpha signing certificate differs from Build 4."
             exit 1
           fi
+          (cd "$(dirname "$output")" && sha256sum "$(basename "$output")" > "$(basename "$output").sha256")
           echo "Alpha certificate matches Build 4."
           echo "signed=true" >> "$GITHUB_OUTPUT"
       - name: Upload persistently signed alpha APK
         if: steps.alpha_sign.outputs.signed == 'true'
         uses: actions/upload-artifact@v4
         with:
-          name: credivaro-v0.1.0-alpha-build8-signed
-          path: ${{ runner.temp }}/credivaro-alpha/credivaro-v0.1.0-alpha-build8.apk
+          name: credivaro-v0.1.0-alpha-build9-signed
+          path: |
+            ${{ runner.temp }}/credivaro-alpha/credivaro-v0.1.0-alpha-build9.apk
+            ${{ runner.temp }}/credivaro-alpha/credivaro-v0.1.0-alpha-build9.apk.sha256
           if-no-files-found: error
           retention-days: 14
 
@@ -114,10 +119,10 @@ jobs:
         run: |
           set -euo pipefail
           if [[ "$SIGNED" == true ]]; then
-            name=credivaro-v0.1.0-alpha-build8-signed
-            apk="$RUNNER_TEMP/credivaro-alpha/credivaro-v0.1.0-alpha-build8.apk"
+            name=credivaro-v0.1.0-alpha-build9-signed
+            apk="$RUNNER_TEMP/credivaro-alpha/credivaro-v0.1.0-alpha-build9.apk"
           else
-            name=credivaro-v0.1.0-alpha-build8-temporary-debug
+            name=credivaro-v0.1.0-alpha-build9-temporary-debug
             apk=app/build/outputs/apk/debug/app-debug.apk
           fi
           badging="$("$ANDROID_HOME/build-tools/35.0.0/aapt2" dump badging "$apk")"
@@ -172,7 +177,7 @@ jobs:
           path: compatibility/current
       - name: Download exact distributed Build 8 for issue 6
         id: original
-        if: needs.debug.outputs.version_code == '8'
+        if: needs.debug.outputs.version_code == '9'
         continue-on-error: true
         uses: actions/download-artifact@v4
         with:
@@ -204,6 +209,7 @@ jobs:
         env:
           EXPECTED_API: ${{ matrix.api }}
           CURRENT_SIGNED: ${{ needs.debug.outputs.signed }}
+          EXPECTED_VERSION_CODE: ${{ needs.debug.outputs.version_code }}
         with:
           api-level: ${{ matrix.api }}
           target: ${{ matrix.target }}
@@ -261,7 +267,7 @@ jobs:
           arch: ${{ matrix.arch }}
           emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
           disable-animations: true
-          script: gradle --no-daemon :core:database:connectedDebugAndroidTest
+          script: gradle --no-daemon :core:database:connectedDebugAndroidTest :app:connectedDebugAndroidTest
       - name: Upload storage reports and generated schemas
         if: always()
         uses: actions/upload-artifact@v4
@@ -270,6 +276,8 @@ jobs:
           path: |
             core/database/build/outputs/androidTest-results/
             core/database/build/reports/androidTests/
+            app/build/outputs/androidTest-results/
+            app/build/reports/androidTests/
             core/database/schemas/
           if-no-files-found: warn
           retention-days: 14
