@@ -98,4 +98,7 @@
     <string name="storage_working">Сохраняем изменения…</string>
     <string name="storage_write_error">Не удалось сохранить изменения. Повторите попытку. Не очищайте данные приложения.</string>
     <string name="third_party_licenses">Лицензии сторонних компонентов — SQLCipher</string>
+    <string name="startup_diagnostics">Диагностика запуска</string>
+    <string name="startup_diagnostics_hint">Локальные замеры тестовой сборки. В скобках — длительность этапа. После перезагрузки откройте этот экран до остановки приложения. Финансовые данные не собираются.</string>
+    <string name="sqlcipher_license_explanation">SQLCipher шифрует локальную базу данных. Ниже приведён оригинальный текст лицензии на английском языке. Это лицензия стороннего компонента, а не Credivaro.</string>
 </resources>

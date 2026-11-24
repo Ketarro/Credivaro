@@ -98,4 +98,7 @@
     <string name="storage_working">Saving changes…</string>
     <string name="storage_write_error">Could not save changes. Try again. Do not clear app data.</string>
     <string name="third_party_licenses">Third-party licenses — SQLCipher</string>
+    <string name="startup_diagnostics">Startup diagnostics</string>
+    <string name="startup_diagnostics_hint">Local debug timings only. Values in parentheses are stage durations. After reboot, open this screen before stopping the app. No financial data is collected.</string>
+    <string name="sqlcipher_license_explanation">SQLCipher encrypts the local database. The original license is reproduced below in English. It is not a Credivaro license.</string>
 </resources>

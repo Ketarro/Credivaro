@@ -60,7 +60,7 @@ jobs:
       - name: Upload temporary debug APK (clean installs only)
         uses: actions/upload-artifact@v4
         with:
-          name: credivaro-v0.1.0-alpha-build9-temporary-debug
+          name: credivaro-v0.1.0-alpha-build10-temporary-debug
           path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 14
@@ -91,7 +91,7 @@ jobs:
           unset ALPHA_KEYSTORE_B64
           apksigner="${ANDROID_HOME}/build-tools/35.0.0/apksigner"
           mkdir -p "$RUNNER_TEMP/credivaro-alpha"
-          output="$RUNNER_TEMP/credivaro-alpha/credivaro-v0.1.0-alpha-build9.apk"
+          output="$RUNNER_TEMP/credivaro-alpha/credivaro-v0.1.0-alpha-build10.apk"
           "$apksigner" sign --ks "$key_dir/alpha.p12" --ks-type PKCS12 \
             --ks-key-alias credivaro-alpha --ks-pass env:ALPHA_KEYSTORE_PASSWORD \
             --key-pass env:ALPHA_KEYSTORE_PASSWORD --out "$output" \
@@ -111,10 +111,10 @@ jobs:
         if: steps.alpha_sign.outputs.signed == 'true'
         uses: actions/upload-artifact@v4
         with:
-          name: credivaro-v0.1.0-alpha-build9-signed
+          name: credivaro-v0.1.0-alpha-build10-signed
           path: |
-            ${{ runner.temp }}/credivaro-alpha/credivaro-v0.1.0-alpha-build9.apk
-            ${{ runner.temp }}/credivaro-alpha/credivaro-v0.1.0-alpha-build9.apk.sha256
+            ${{ runner.temp }}/credivaro-alpha/credivaro-v0.1.0-alpha-build10.apk
+            ${{ runner.temp }}/credivaro-alpha/credivaro-v0.1.0-alpha-build10.apk.sha256
           if-no-files-found: error
           retention-days: 14
 
@@ -125,10 +125,10 @@ jobs:
         run: |
           set -euo pipefail
           if [[ "$SIGNED" == true ]]; then
-            name=credivaro-v0.1.0-alpha-build9-signed
-            apk="$RUNNER_TEMP/credivaro-alpha/credivaro-v0.1.0-alpha-build9.apk"
+            name=credivaro-v0.1.0-alpha-build10-signed
+            apk="$RUNNER_TEMP/credivaro-alpha/credivaro-v0.1.0-alpha-build10.apk"
           else
-            name=credivaro-v0.1.0-alpha-build9-temporary-debug
+            name=credivaro-v0.1.0-alpha-build10-temporary-debug
             apk=app/build/outputs/apk/debug/app-debug.apk
           fi
           badging="$("$ANDROID_HOME/build-tools/35.0.0/aapt2" dump badging "$apk")"
@@ -181,15 +181,15 @@ jobs:
         with:
           name: ${{ needs.debug.outputs.apk_artifact }}
           path: compatibility/current
-      - name: Download exact distributed Build 8 for issue 6
+      - name: Download exact distributed Build 9 for upgrade
         id: original
-        if: needs.debug.outputs.version_code == '9'
+        if: needs.debug.outputs.version_code == '10'
         continue-on-error: true
         uses: actions/download-artifact@v4
         with:
-          name: credivaro-v0.1.0-alpha-build8-signed
+          name: credivaro-v0.1.0-alpha-build9-signed
           repository: Ketarro/Credivaro
-          run-id: 45325287905
+          run-id: 45399939307
           github-token: ${{ github.token }}
           path: compatibility/original
       - name: Prepare diagnostics
@@ -203,7 +203,7 @@ jobs:
             echo "::warning::Current APK is temporary debug; this does not validate the persistent signer."
           fi
           if [[ "$ORIGINAL" == failure ]]; then
-            echo "::warning::Exact original Build 8 artifact unavailable; only the current APK can be tested."
+            echo "::warning::Exact original Build 9 artifact unavailable; only the current APK can be tested."
           fi
       - name: Enable KVM
         run: |
@@ -216,6 +216,7 @@ jobs:
           EXPECTED_API: ${{ matrix.api }}
           CURRENT_SIGNED: ${{ needs.debug.outputs.signed }}
           EXPECTED_VERSION_CODE: ${{ needs.debug.outputs.version_code }}
+          BASELINE_VERSION_CODE: '9'
         with:
           api-level: ${{ matrix.api }}
           target: ${{ matrix.target }}

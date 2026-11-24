@@ -1,6 +1,7 @@
 package io.github.ketarro.credivaro.database
 
 import android.content.Context
+import android.os.SystemClock
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.sqlite.db.SupportSQLiteOpenHelper
@@ -43,20 +44,31 @@ class EncryptedStorage private constructor(
     companion object {
         internal fun build(context: Context, name: String, password: ByteArray): StorageDatabase {
             System.loadLibrary("sqlcipher")
-            return Room.databaseBuilder(context, StorageDatabase::class.java, name)
+            return buildRoom(context, name, password)
+        }
+
+        private fun buildRoom(context: Context, name: String, password: ByteArray): StorageDatabase =
+            Room.databaseBuilder(context, StorageDatabase::class.java, name)
                 .openHelperFactory(PreserveFileFactory(password))
                 .setJournalMode(RoomDatabase.JournalMode.TRUNCATE)
                 .build()
+
+        private inline fun <T> timed(stage: String, onStage: (String, Long) -> Unit, block: () -> T): T {
+            val start = SystemClock.elapsedRealtime()
+            try { return block() } finally { onStage(stage, SystemClock.elapsedRealtime() - start) }
         }
-        suspend fun open(context: Context, name: String = "credivaro.db", clock: Clock = Clock.systemUTC()): EncryptedStorage =
+
+        suspend fun open(context: Context, name: String = "credivaro.db", clock: Clock = Clock.systemUTC(),
+            onStage: (String, Long) -> Unit = { _, _ -> }): EncryptedStorage =
             withContext(Dispatchers.IO) {
                 val app = context.applicationContext
-                val password = DatabaseKey.loadOrCreate(app, name)
+                val password = timed("storage.keystoreEnvelope", onStage) { DatabaseKey.loadOrCreate(app, name) }
                 var db: StorageDatabase? = null
                 try {
-                    val opened = build(app, name, password)
+                    timed("storage.nativeLoad", onStage) { System.loadLibrary("sqlcipher") }
+                    val opened = timed("storage.roomBuilder", onStage) { buildRoom(app, name, password) }
                     db = opened
-                    opened.openHelper.writableDatabase
+                    timed("storage.databaseOpen", onStage) { opened.openHelper.writableDatabase }
                     EncryptedStorage(opened, password, clock)
                 } catch (e: Throwable) {
                     try { db?.close() } finally { password.fill(0) }

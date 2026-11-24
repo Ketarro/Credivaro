@@ -1,14 +1,15 @@
 package io.github.ketarro.credivaro
 
 import android.os.Bundle
+import android.os.Build
+import android.os.LocaleList
+import android.app.LocaleManager
+import android.content.Context
 import android.content.res.Configuration
 import android.content.res.Resources
 import androidx.compose.foundation.clickable
-import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.flow.collect
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
-import android.util.Log
 import android.graphics.drawable.ColorDrawable
 import androidx.compose.foundation.background
 import androidx.compose.ui.platform.LocalConfiguration
@@ -44,7 +45,9 @@ import io.github.ketarro.credivaro.ui.*
 
 class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
+        StartupDiagnostics.mark("activity.create.begin")
         super.onCreate(savedInstanceState)
+        StorageSession.start(applicationContext)
         val preferences = getSharedPreferences("appearance", MODE_PRIVATE)
         val initialAppearance = Appearance.fromStored(preferences.getString("mode", null))
         val initialDark = when (initialAppearance) {
@@ -56,7 +59,7 @@ class MainActivity : AppCompatActivity() {
         applyWindowAppearance(initialDark)
         // Avoid activity window enter/exit animations during locale transitions.
         window.setWindowAnimations(0)
-        if (BuildConfig.DEBUG) Log.d("CredivaroLocale", "activity created")
+        StartupDiagnostics.mark("activity.create.end")
         setContent {
             var appearance by remember { mutableStateOf(initialAppearance) }
             val systemDark = isSystemInDarkTheme()
@@ -66,25 +69,17 @@ class MainActivity : AppCompatActivity() {
                 Appearance.SYSTEM -> systemDark
             }
             val configuration = LocalConfiguration.current
-            var language by remember { mutableStateOf(currentAppLanguage()) }
-            LaunchedEffect(configuration) { language = currentAppLanguage() }
+            var language by remember { mutableStateOf(currentAppLanguage(this@MainActivity)) }
+            LaunchedEffect(configuration) { language = currentAppLanguage(this@MainActivity) }
             LaunchedEffect(dark) { applyWindowAppearance(dark) }
             val systemLanguage = remember(configuration) {
                 Resources.getSystem().configuration.locales[0]
             }
-            var storageState by remember { mutableStateOf<StorageState>(StorageState.Loading) }
-            var retry by remember { mutableIntStateOf(0) }
-            LaunchedEffect(retry) {
-                storageState = StorageState.Loading
-                try {
-                    val repository = StorageSession.repository(applicationContext)
-                    repository.observeAll().collect { storageState = StorageState.Ready(repository, it) }
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (_: Exception) {
-                    storageState = StorageState.Failed
-                } catch (_: LinkageError) {
-                    storageState = StorageState.Failed
+            val storageState by StorageSession.state.collectAsState()
+            LaunchedEffect(storageState is StorageState.Ready) {
+                if (storageState is StorageState.Ready) {
+                    withFrameNanos { }
+                    StartupDiagnostics.mark("activity.storageReadyFrame")
                 }
             }
             CredivaroTheme(dark) {
@@ -93,7 +88,7 @@ class MainActivity : AppCompatActivity() {
                     systemDark = systemDark,
                     systemLanguage = systemLanguage,
                     storageState = storageState,
-                    onRetryStorage = { retry++ },
+                    onRetryStorage = { StorageSession.start(applicationContext) },
                     appearance = appearance,
                     onAppearance = { value ->
                         preferences.edit().putString("mode", value.stored).apply()
@@ -101,10 +96,11 @@ class MainActivity : AppCompatActivity() {
                     },
                     language = language,
                     onLanguage = { value ->
-                        if (value != currentAppLanguage()) {
-                            if (BuildConfig.DEBUG) Log.d("CredivaroLocale", "locale change requested")
-                            AppCompatDelegate.setApplicationLocales(LocaleListCompat.forLanguageTags(value.tag))
-                            language = currentAppLanguage()
+                        if (value != currentAppLanguage(this@MainActivity)) {
+                            StartupDiagnostics.mark("locale.request")
+                            applyAppLanguage(this@MainActivity, value)
+                            language = currentAppLanguage(this@MainActivity)
+                            StartupDiagnostics.mark("locale.request.return")
                         }
                     }
                 )
@@ -114,7 +110,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onConfigurationChanged(newConfig: Configuration) {
         super.onConfigurationChanged(newConfig)
-        if (BuildConfig.DEBUG) Log.d("CredivaroLocale", "configuration changed")
+        StartupDiagnostics.mark("activity.configurationChanged")
     }
 
     private fun applyWindowAppearance(dark: Boolean) {
@@ -127,8 +123,18 @@ class MainActivity : AppCompatActivity() {
     }
 }
 
-private fun currentAppLanguage(): AppLanguage =
-    AppLanguage.fromTag(AppCompatDelegate.getApplicationLocales().get(0)?.language)
+// Android 13+ owns per-app language persistence; AppCompat retains the legacy path.
+private fun currentAppLanguage(context: Context): AppLanguage =
+    if (Build.VERSION.SDK_INT >= 33) {
+        val locales = requireNotNull(context.getSystemService(LocaleManager::class.java)).applicationLocales
+        AppLanguage.fromTag(if (locales.isEmpty) null else locales[0].language)
+    } else AppLanguage.fromTag(AppCompatDelegate.getApplicationLocales().get(0)?.language)
+
+private fun applyAppLanguage(context: Context, value: AppLanguage) {
+    if (Build.VERSION.SDK_INT >= 33) {
+        requireNotNull(context.getSystemService(LocaleManager::class.java)).applicationLocales = LocaleList.forLanguageTags(value.tag)
+    } else AppCompatDelegate.setApplicationLocales(LocaleListCompat.forLanguageTags(value.tag))
+}
 
 @Composable
 private fun AlphaScreen(
@@ -145,6 +151,16 @@ private fun AlphaScreen(
     var obligations by rememberSaveable { mutableStateOf(false) }
     var dialog by rememberSaveable { mutableStateOf("") }
     var showLicenses by rememberSaveable { mutableStateOf(false) }
+    var showDiagnostics by rememberSaveable { mutableStateOf(false) }
+    var pendingLanguage by remember { mutableStateOf<AppLanguage?>(null) }
+    LaunchedEffect(pendingLanguage) {
+        val selected = pendingLanguage ?: return@LaunchedEffect
+        // Close the separate dialog window before requesting system resource/config changes.
+        withFrameNanos { }
+        withFrameNanos { }
+        pendingLanguage = null
+        onLanguage(selected)
+    }
     BackHandler(settings || about || obligations) {
         if (about) about = false else { settings = false; obligations = false }
     }
@@ -182,8 +198,23 @@ private fun AlphaScreen(
                         Text(stringResource(R.string.license_label))
                         Text(stringResource(R.string.about_description), color = colors.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
                         TextButton(onClick = { showLicenses = true }) { Text(stringResource(R.string.third_party_licenses)) }
+                        if (BuildConfig.DEBUG) {
+                            TextButton(onClick = { showDiagnostics = true }) { Text(stringResource(R.string.startup_diagnostics)) }
+                        }
                     }
                     AlphaNotice()
+                    if (showDiagnostics && BuildConfig.DEBUG) {
+                        val events by StartupDiagnostics.events.collectAsState()
+                        AlertDialog(onDismissRequest = { showDiagnostics = false },
+                            title = { Text(stringResource(R.string.startup_diagnostics)) },
+                            text = { Column(Modifier.heightIn(max = 380.dp).verticalScroll(rememberScrollState()),
+                                verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Text(stringResource(R.string.startup_diagnostics_hint))
+                                Text(events.joinToString("\n"), style = MaterialTheme.typography.bodySmall,
+                                    modifier = Modifier.testTag("startup-diagnostics"))
+                            } },
+                            confirmButton = { TextButton(onClick = { showDiagnostics = false }) { Text(stringResource(R.string.back)) } })
+                    }
                     if (showLicenses) {
                         val context = LocalContext.current
                         val license = remember(context) {
@@ -191,7 +222,11 @@ private fun AlphaScreen(
                         }
                         AlertDialog(onDismissRequest = { showLicenses = false },
                             title = { Text(stringResource(R.string.third_party_licenses)) },
-                            text = { Text(license, Modifier.heightIn(max = 360.dp).verticalScroll(rememberScrollState())) },
+                            text = { Column(Modifier.heightIn(max = 360.dp).verticalScroll(rememberScrollState()),
+                                verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                                Text(stringResource(R.string.sqlcipher_license_explanation))
+                                Text(license)
+                            } },
                             confirmButton = { TextButton(onClick = { showLicenses = false }) { Text(stringResource(R.string.back)) } })
                     }
                 } else if (settings) {
@@ -207,7 +242,7 @@ private fun AlphaScreen(
                     if (dialog == "language") {
                         val labels = listOf(R.string.language_system, R.string.language_ru, R.string.language_en)
                         PreferenceDialog(R.string.language_label, labels.map { stringResource(it) }, language.ordinal,
-                            onDismiss = { dialog = "" }, onSelect = { dialog = ""; onLanguage(AppLanguage.entries[it]) })
+                            onDismiss = { dialog = "" }, onSelect = { dialog = ""; pendingLanguage = AppLanguage.entries[it] })
                     }
                     SectionTitle(R.string.information)
                     Card(onClick = { about = true }, shape = RoundedCornerShape(16.dp),
