@@ -13,4 +13,22 @@
     <string name="theme_system">Системная</string>
     <string name="theme_light">Светлая</string>
     <string name="theme_dark">Тёмная</string>
+    <string name="settings">Настройки</string>
+    <string name="personalization">Персонализация</string>
+    <string name="language_label">Язык приложения</string>
+    <string name="language_system">Системный</string>
+    <string name="language_ru">Русский</string>
+    <string name="language_en">English</string>
+    <string name="information">Информация</string>
+    <string name="preview_label">ALPHA</string>
+    <string name="welcome_title">Финансы под контролем</string>
+    <string name="welcome_description">Учёт обязательств появится в следующих итерациях разработки.</string>
+    <string name="privacy_title">Локальное приложение</string>
+    <string name="privacy_short">В этой сборке нет аккаунта и финансовых записей.</string>
+    <string name="alpha_short">Только для тестирования. Не вводите реальные финансовые данные.</string>
+    <string name="build_label">Сборка %1$d</string>
+    <string name="about_summary">Версия, лицензия и состояние разработки</string>
+    <string name="back">Назад</string>
+    <string name="about_description">Credivaro — открытый проект для управления кредитными обязательствами.</string>
+    <string name="appearance_summary">Выберите удобное оформление.</string>
 </resources>

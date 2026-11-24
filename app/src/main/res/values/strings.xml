@@ -13,4 +13,22 @@
     <string name="theme_system">System</string>
     <string name="theme_light">Light</string>
     <string name="theme_dark">Dark</string>
+    <string name="settings">Settings</string>
+    <string name="personalization">Personalization</string>
+    <string name="language_label">App language</string>
+    <string name="language_system">System</string>
+    <string name="language_ru">Русский</string>
+    <string name="language_en">English</string>
+    <string name="information">Information</string>
+    <string name="preview_label">ALPHA PREVIEW</string>
+    <string name="welcome_title">Your finances, in one place</string>
+    <string name="welcome_description">Debt tracking is coming in the next development iterations.</string>
+    <string name="privacy_title">Local-first by design</string>
+    <string name="privacy_short">No account or financial records in this build.</string>
+    <string name="alpha_short">For testing only. Do not enter real financial data.</string>
+    <string name="build_label">Build %1$d</string>
+    <string name="about_summary">Version, license and development status</string>
+    <string name="back">Back</string>
+    <string name="about_description">Credivaro is an open-source project for managing credit obligations.</string>
+    <string name="appearance_summary">Choose your preferred appearance.</string>
 </resources>

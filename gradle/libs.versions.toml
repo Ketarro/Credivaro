@@ -3,9 +3,11 @@ agp = "8.13.2"
 kotlin = "2.3.0"
 composeBom = "2025.10.00"
 activity = "1.11.0"
+appcompat = "1.7.1"
 junit = "4.13.2"
 
 [libraries]
+androidx-appcompat = { module = "androidx.appcompat:appcompat", version.ref = "appcompat" }
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "activity" }
 androidx-compose-bom = { module = "androidx.compose:compose-bom", version.ref = "composeBom" }
 androidx-compose-ui = { module = "androidx.compose.ui:ui" }
