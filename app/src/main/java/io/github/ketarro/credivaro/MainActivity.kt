@@ -9,6 +9,8 @@ import android.util.Log
 import android.graphics.drawable.ColorDrawable
 import androidx.compose.foundation.background
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.activity.SystemBarStyle
@@ -127,10 +129,11 @@ private fun AlphaScreen(
         if (about) about = false else { settings = false; obligations = false }
     }
     val colors = MaterialTheme.colorScheme
+    val keyboardVisible = WindowInsets.ime.getBottom(LocalDensity.current) > 0
     Scaffold(
         containerColor = colors.background,
         bottomBar = {
-            CredivaroBottomBar(
+            if (!keyboardVisible) CredivaroBottomBar(
                 settingsSelected = settings,
                 obligationsSelected = obligations,
                 onHome = { settings = false; about = false; obligations = false },
@@ -139,7 +142,7 @@ private fun AlphaScreen(
             )
         }
     ) { padding ->
-        Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.TopCenter) {
+        Box(Modifier.fillMaxSize().padding(padding).consumeWindowInsets(padding).imePadding(), contentAlignment = Alignment.TopCenter) {
             Column(
                 Modifier.widthIn(max = 640.dp).fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -322,7 +325,7 @@ private fun PersonalizationCard(
     systemLanguage: java.util.Locale, onTheme: () -> Unit, onLanguage: () -> Unit
 ) {
     val theme = when (appearance) {
-        Appearance.SYSTEM -> stringResource(R.string.system_value, stringResource(R.string.theme_system),
+        Appearance.SYSTEM -> stringResource(R.string.system_value, stringResource(R.string.system_short),
             stringResource(if (systemDark) R.string.theme_dark else R.string.theme_light))
         Appearance.LIGHT -> stringResource(R.string.theme_light)
         Appearance.DARK -> stringResource(R.string.theme_dark)
@@ -333,7 +336,7 @@ private fun PersonalizationCard(
         else -> systemLanguage.getDisplayLanguage(systemLanguage).ifBlank { systemLanguage.language }
     }
     val languageValue = when (language) {
-        AppLanguage.SYSTEM -> stringResource(R.string.system_value, stringResource(R.string.language_system), systemName)
+        AppLanguage.SYSTEM -> stringResource(R.string.system_value, stringResource(R.string.system_short), systemName)
         AppLanguage.RUSSIAN -> stringResource(R.string.language_ru)
         AppLanguage.ENGLISH -> stringResource(R.string.language_en)
     }
@@ -341,7 +344,7 @@ private fun PersonalizationCard(
         Column {
             PreferenceRow(R.string.theme_label, theme, R.drawable.ic_theme, onTheme)
             HorizontalDivider(Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant)
-            PreferenceRow(R.string.language_label, languageValue, R.drawable.ic_language, onLanguage)
+            PreferenceRow(R.string.language_short, languageValue, R.drawable.ic_language, onLanguage)
         }
     }
 }
@@ -349,14 +352,29 @@ private fun PersonalizationCard(
 @Composable
 private fun PreferenceRow(label: Int, value: String, icon: Int, action: () -> Unit) {
     val colors = MaterialTheme.colorScheme
-    Row(Modifier.fillMaxWidth().clickable(onClick = action).heightIn(min = 64.dp)
-        .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        Icon(painterResource(icon), null, tint = colors.primary)
-        Text(stringResource(label), Modifier.weight(1f), style = MaterialTheme.typography.titleMedium)
-        Text(value, Modifier.weight(1f), textAlign = TextAlign.End, style = MaterialTheme.typography.bodyMedium,
-            color = colors.onSurfaceVariant)
-        Icon(painterResource(R.drawable.ic_chevron), null, tint = colors.onSurfaceVariant)
+    val fontScale = LocalDensity.current.fontScale
+    BoxWithConstraints(Modifier.fillMaxWidth().clickable(onClick = action)
+        .heightIn(min = 64.dp).padding(horizontal = 16.dp, vertical = 12.dp)) {
+        val compact = maxWidth < 250.dp || fontScale > 1.3f
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Icon(painterResource(icon), null, tint = colors.primary, modifier = Modifier.size(24.dp))
+            if (compact) {
+                // Both manual and system modes use the same two text slots at large font sizes.
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Text(stringResource(label), style = MaterialTheme.typography.titleMedium)
+                    Text(value, style = MaterialTheme.typography.bodyMedium, color = colors.onSurfaceVariant,
+                        minLines = 2, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                }
+            } else {
+                Text(stringResource(label), Modifier.weight(0.47f), style = MaterialTheme.typography.titleMedium,
+                    maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(value, Modifier.weight(0.53f), textAlign = TextAlign.End,
+                    style = MaterialTheme.typography.bodyMedium, color = colors.onSurfaceVariant,
+                    maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
+            Icon(painterResource(R.drawable.ic_chevron), null, tint = colors.onSurfaceVariant, modifier = Modifier.size(20.dp))
+        }
     }
 }
 

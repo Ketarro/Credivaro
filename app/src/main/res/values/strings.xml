@@ -70,4 +70,14 @@
     <string name="field_amount_hint">Decimal point or comma; no grouping</string>
     <string name="preview_bank_zone">Test dates use the device time zone.</string>
     <string name="privacy_preview">No account or network access. Test financial records remain in memory only.</string>
+    <string name="language_short">Language</string>
+    <string name="system_short">Auto</string>
+    <string name="form_lender">Lender</string>
+    <string name="form_balance">Test balance</string>
+    <string name="form_rate">Annual rate, %</string>
+    <string name="form_payment">Scheduled payment</string>
+    <string name="form_minimum">Minimum payment</string>
+    <string name="form_limit">Credit limit</string>
+    <string name="form_optional">Optional</string>
+    <string name="form_accessible_optional">%1$s, %2$s</string>
 </resources>

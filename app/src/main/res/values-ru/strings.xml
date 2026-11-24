@@ -70,4 +70,14 @@
     <string name="field_amount_hint">Точка или запятая, без разделителей разрядов</string>
     <string name="preview_bank_zone">Тестовые даты используют часовой пояс устройства.</string>
     <string name="privacy_preview">Без аккаунта и доступа к сети. Тестовые финансовые записи остаются только в памяти.</string>
+    <string name="language_short">Язык</string>
+    <string name="system_short">Авто</string>
+    <string name="form_lender">Кредитор</string>
+    <string name="form_balance">Тестовый остаток</string>
+    <string name="form_rate">Годовая ставка, %</string>
+    <string name="form_payment">Плановый платёж</string>
+    <string name="form_minimum">Минимальный платёж</string>
+    <string name="form_limit">Кредитный лимит</string>
+    <string name="form_optional">Необязательно</string>
+    <string name="form_accessible_optional">%1$s, %2$s</string>
 </resources>

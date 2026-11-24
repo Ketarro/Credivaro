@@ -13,6 +13,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import io.github.ketarro.credivaro.R
@@ -153,6 +157,7 @@ private fun PreviewEditor(existing: Obligation?, onCancel: () -> Unit, onSave: (
     }?.raw().orEmpty()) }
     var limit by remember { mutableStateOf((oldTerms as? ObligationTerms.CreditCard)?.creditLimit?.raw().orEmpty()) }
     var error by remember { mutableStateOf(false) }
+    val focusManager = LocalFocusManager.current
     Text(stringResource(if (existing == null) R.string.add_obligation else R.string.edit_obligation), style = MaterialTheme.typography.headlineSmall)
     Text(stringResource(R.string.field_type), style = MaterialTheme.typography.titleMedium)
     Column(Modifier.selectableGroup()) {
@@ -165,8 +170,8 @@ private fun PreviewEditor(existing: Obligation?, onCancel: () -> Unit, onSave: (
             }
         }
     }
-    OutlinedTextField(title, { title = it.take(120) }, Modifier.fillMaxWidth(), label = { Text(stringResource(R.string.field_title)) }, singleLine = true)
-    OutlinedTextField(lender, { lender = it.take(120) }, Modifier.fillMaxWidth(), label = { Text(stringResource(R.string.field_lender)) }, singleLine = true)
+    StaticField(title, { title = it.take(120) }, R.string.field_title, optional = false)
+    StaticField(lender, { lender = it.take(120) }, R.string.form_lender)
     Text(stringResource(R.string.field_currency))
     Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
         currencies.forEach { code ->
@@ -174,12 +179,12 @@ private fun PreviewEditor(existing: Obligation?, onCancel: () -> Unit, onSave: (
                 label = { Text(code) }, enabled = existing == null)
         }
     }
-    AmountField(balance, { balance = it }, R.string.field_balance)
+    AmountField(balance, { balance = it }, R.string.form_balance)
     if (type != ObligationType.OTHER) {
-        AmountField(rate, { rate = it }, R.string.field_rate)
-        AmountField(payment, { payment = it }, if (type == ObligationType.CREDIT_CARD) R.string.field_minimum else R.string.field_payment)
+        AmountField(rate, { rate = it }, R.string.form_rate)
+        AmountField(payment, { payment = it }, if (type == ObligationType.CREDIT_CARD) R.string.form_minimum else R.string.form_payment)
     }
-    if (type == ObligationType.CREDIT_CARD) AmountField(limit, { limit = it }, R.string.field_limit)
+    if (type == ObligationType.CREDIT_CARD) AmountField(limit, { limit = it }, R.string.form_limit)
     Text(stringResource(R.string.field_amount_hint), style = MaterialTheme.typography.bodySmall)
     Text(stringResource(R.string.preview_bank_zone), style = MaterialTheme.typography.bodySmall)
     if (error) Text(stringResource(R.string.invalid_fields), color = MaterialTheme.colorScheme.error)
@@ -202,13 +207,32 @@ private fun PreviewEditor(existing: Obligation?, onCancel: () -> Unit, onSave: (
             require(ObligationValidator.validate(value, today).isEmpty())
             value
         }.getOrNull()
-        if (result == null) error = true else onSave(result)
+        if (result == null) error = true else { focusManager.clearFocus(); onSave(result) }
     }) { Text(stringResource(R.string.save)) }
-    TextButton(onClick = onCancel) { Text(stringResource(R.string.cancel)) }
+    TextButton(onClick = { focusManager.clearFocus(); onCancel() }) { Text(stringResource(R.string.cancel)) }
 }
 
 @Composable
 private fun AmountField(value: String, update: (String) -> Unit, label: Int) {
-    OutlinedTextField(value, { update(it.take(32)) }, Modifier.fillMaxWidth(), label = { Text(stringResource(label)) },
-        singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal))
+    StaticField(value, { update(it.take(32)) }, label, keyboardType = KeyboardType.Decimal)
+}
+
+@Composable
+private fun StaticField(value: String, update: (String) -> Unit, label: Int,
+    optional: Boolean = true, keyboardType: KeyboardType = KeyboardType.Text) {
+    val title = stringResource(label)
+    val optionalLabel = stringResource(R.string.form_optional)
+    val accessibleLabel = if (optional) stringResource(R.string.form_accessible_optional, title, optionalLabel) else title
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Row(Modifier.fillMaxWidth().clearAndSetSemantics {},
+            verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(title, Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
+            if (optional) Text(optionalLabel, style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        OutlinedTextField(value = value, onValueChange = update,
+            modifier = Modifier.fillMaxWidth().semantics { contentDescription = accessibleLabel },
+            singleLine = true, shape = RoundedCornerShape(12.dp),
+            keyboardOptions = KeyboardOptions(keyboardType = keyboardType))
+    }
 }
