@@ -45,7 +45,7 @@ jobs:
       - name: Upload temporary debug APK (clean installs only)
         uses: actions/upload-artifact@v4
         with:
-          name: credivaro-v0.1.0-alpha-build4-temporary-debug
+          name: credivaro-v0.1.0-alpha-build5-temporary-debug
           path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 14
@@ -76,18 +76,26 @@ jobs:
           unset ALPHA_KEYSTORE_B64
           apksigner="${ANDROID_HOME}/build-tools/35.0.0/apksigner"
           mkdir -p "$RUNNER_TEMP/credivaro-alpha"
-          output="$RUNNER_TEMP/credivaro-alpha/credivaro-v0.1.0-alpha-build4.apk"
+          output="$RUNNER_TEMP/credivaro-alpha/credivaro-v0.1.0-alpha-build5.apk"
           "$apksigner" sign --ks "$key_dir/alpha.p12" --ks-type PKCS12 \
             --ks-key-alias credivaro-alpha --ks-pass env:ALPHA_KEYSTORE_PASSWORD \
             --key-pass env:ALPHA_KEYSTORE_PASSWORD --out "$output" \
             app/build/outputs/apk/debug/app-debug.apk
-          "$apksigner" verify --verbose --print-certs "$output"
+          verification="$("$apksigner" verify --verbose --print-certs "$output")"
+          printf '%s\n' "$verification"
+          expected_sha256="d26244a7cdf0207f6bf0f5c54ad557c89b2e1ae4357bb07ae070085de66c22c8"
+          actual_sha256="$(printf '%s\n' "$verification" | sed -n 's/^Signer #1 certificate SHA-256 digest: //p')"
+          if [[ "$actual_sha256" != "$expected_sha256" ]]; then
+            echo "::error::Alpha signing certificate differs from Build 4."
+            exit 1
+          fi
+          echo "Alpha certificate matches Build 4."
           echo "signed=true" >> "$GITHUB_OUTPUT"
       - name: Upload persistently signed alpha APK
         if: steps.alpha_sign.outputs.signed == 'true'
         uses: actions/upload-artifact@v4
         with:
-          name: credivaro-v0.1.0-alpha-build4-signed
-          path: ${{ runner.temp }}/credivaro-alpha/credivaro-v0.1.0-alpha-build4.apk
+          name: credivaro-v0.1.0-alpha-build5-signed
+          path: ${{ runner.temp }}/credivaro-alpha/credivaro-v0.1.0-alpha-build5.apk
           if-no-files-found: error
           retention-days: 14

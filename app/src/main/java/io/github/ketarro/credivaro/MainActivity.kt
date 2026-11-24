@@ -1,6 +1,8 @@
 package io.github.ketarro.credivaro
 
 import android.os.Bundle
+import android.content.res.Configuration
+import android.util.Log
 import android.graphics.drawable.ColorDrawable
 import androidx.compose.foundation.background
 import androidx.compose.ui.platform.LocalConfiguration
@@ -35,10 +37,20 @@ import io.github.ketarro.credivaro.ui.*
 class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
         val preferences = getSharedPreferences("appearance", MODE_PRIVATE)
+        val initialAppearance = Appearance.fromStored(preferences.getString("mode", null))
+        val initialDark = when (initialAppearance) {
+            Appearance.LIGHT -> false
+            Appearance.DARK -> true
+            Appearance.SYSTEM -> (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
+        }
+        // Match the window to the saved theme before the first Compose frame.
+        applyWindowAppearance(initialDark)
+        // Avoid activity window enter/exit animations during locale transitions.
+        window.setWindowAnimations(0)
+        if (BuildConfig.DEBUG) Log.d("CredivaroLocale", "activity created")
         setContent {
-            var appearance by remember { mutableStateOf(Appearance.fromStored(preferences.getString("mode", null))) }
+            var appearance by remember { mutableStateOf(initialAppearance) }
             val dark = when (appearance) {
                 Appearance.LIGHT -> false
                 Appearance.DARK -> true
@@ -47,14 +59,7 @@ class MainActivity : AppCompatActivity() {
             val configuration = LocalConfiguration.current
             var language by remember { mutableStateOf(currentAppLanguage()) }
             LaunchedEffect(configuration) { language = currentAppLanguage() }
-            LaunchedEffect(dark) {
-                window.setBackgroundDrawable(ColorDrawable(android.graphics.Color.parseColor(
-                    if (dark) "#102D36" else "#F5F7FA"
-                )))
-                val style = if (dark) SystemBarStyle.dark(android.graphics.Color.TRANSPARENT)
-                    else SystemBarStyle.light(android.graphics.Color.TRANSPARENT, android.graphics.Color.TRANSPARENT)
-                enableEdgeToEdge(statusBarStyle = style, navigationBarStyle = style)
-            }
+            LaunchedEffect(dark) { applyWindowAppearance(dark) }
             CredivaroTheme(dark) {
                 AlphaScreen(
                     dark = dark,
@@ -66,13 +71,28 @@ class MainActivity : AppCompatActivity() {
                     language = language,
                     onLanguage = { value ->
                         if (value != currentAppLanguage()) {
+                            if (BuildConfig.DEBUG) Log.d("CredivaroLocale", "locale change requested")
                             AppCompatDelegate.setApplicationLocales(LocaleListCompat.forLanguageTags(value.tag))
+                            language = currentAppLanguage()
                         }
-                        language = currentAppLanguage()
                     }
                 )
             }
         }
+    }
+
+    override fun onConfigurationChanged(newConfig: Configuration) {
+        super.onConfigurationChanged(newConfig)
+        if (BuildConfig.DEBUG) Log.d("CredivaroLocale", "configuration changed")
+    }
+
+    private fun applyWindowAppearance(dark: Boolean) {
+        window.setBackgroundDrawable(ColorDrawable(android.graphics.Color.parseColor(
+            if (dark) "#102D36" else "#F5F7FA"
+        )))
+        val style = if (dark) SystemBarStyle.dark(android.graphics.Color.TRANSPARENT)
+            else SystemBarStyle.light(android.graphics.Color.TRANSPARENT, android.graphics.Color.TRANSPARENT)
+        enableEdgeToEdge(statusBarStyle = style, navigationBarStyle = style)
     }
 }
 
