@@ -29,7 +29,20 @@ check_one() (
   if [[ "$require_signed" == true ]]; then
     grep -Fx "Signer #1 certificate SHA-256 digest: $fingerprint" "$dest/signature.txt"
   fi
-  adb logcat -c
+  # API 26 may report boot_completed before logd is fully ready.
+  # Never interpret a log-clearing failure as an APK installation failure.
+  cleared=false
+  for attempt in 1 2 3 4 5; do
+    if adb logcat -b main -b crash -c >> "$dest/logcat-clear.txt" 2>&1; then
+      cleared=true
+      break
+    fi
+    sleep 2
+  done
+  if [[ "$cleared" != true ]]; then
+    echo "INFRASTRUCTURE: logcat buffers could not be cleared" | tee "$dest/result.txt"
+    exit 2
+  fi
   # Force a clean install on this isolated emulator only.
   if adb shell pm path "$pkg" | grep -q '^package:'; then adb uninstall "$pkg"; fi
   adb install "$apk" 2>&1 | tee "$dest/install.txt"
