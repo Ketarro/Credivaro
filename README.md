@@ -10,7 +10,7 @@ Credivaro is an open-source Android app for intelligent debt management, loan tr
 
 ## Project status
 
-Planning and design. No installable application or APK is available yet.
+Planning and design. The first planned application version is **v0.1.0-alpha**; no installable application or APK is available yet. Development will proceed through iterative pre-release builds until the maintainer explicitly approves stable release. See [versioning and release policy](docs/VERSIONING.md).
 
 ## Planned features
 - Manage loans, credit cards and installments with custom lender terms.

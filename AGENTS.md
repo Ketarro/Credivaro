@@ -1,7 +1,10 @@
 # Agent and contributor instructions
 
 ## Scope
-Read the project brief and roadmap before changes. Do not start implementation beyond the agreed scope. Keep main releasable; use focused branches and PRs. Preserve user changes and existing license. Never force-push or merge without approval.
+Read the project brief and roadmap before changes. Do not start implementation beyond the agreed scope. Keep main buildable once Android implementation begins; use focused branches and PRs. Preserve user changes and existing license. Never force-push or merge without approval.
+
+## Versioning and release approval
+The first planned application version is v0.1.0-alpha. Follow docs/VERSIONING.md. Iterate pre-release versions based on maintainer feedback; no automatic promotion to beta, RC or stable, no release tags or publication without explicit approval. Documentation revisions such as v1.0 are not application versions. Do not mark an alpha as released without actual build evidence and approval.
 
 ## Architecture
 Kotlin / Compose / Material 3 are the intended stack. Keep pure financial rules separate from Android UI, persistence and scheduling. Start with necessary modules only; document architecture decisions. Use repository abstractions and explicit data migrations.

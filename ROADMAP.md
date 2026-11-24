@@ -1,6 +1,6 @@
 # Roadmap
 
-Status: planning. Dates and scope are not promises.
+Status: planning. First application version: **v0.1.0-alpha** (planned, not published). Dates and scope are not promises. All development phases may be revisited during alpha; completing a phase does not authorize a stable release. The maintainer determines release readiness. See [versioning policy](docs/VERSIONING.md).
 
 ## Phase 0 — Foundation
 - [x] Product concept and Credivaro name selected.
@@ -31,7 +31,9 @@ Status: planning. Dates and scope are not promises.
 - [ ] Advanced card cycles, limits and grace-period rules.
 - [ ] Import/export, document parsing and optional integrations after privacy review.
 
-## Phase 5 — Release
+## Phase 5 — Iterative stabilization and release review
 - [ ] Accessibility, localization, security and regression testing.
 - [ ] Confirm branding rights and distribution requirements.
-- [ ] Publish documented, tested builds and release notes.
+- [ ] Iterate alpha builds, collect maintainer feedback, fix defects and revise scope as needed.
+- [ ] Obtain explicit maintainer approval before a beta, release candidate or stable transition; beta/RC are optional.
+- [ ] Publish documented, tested builds and release notes only with appropriate approval.
