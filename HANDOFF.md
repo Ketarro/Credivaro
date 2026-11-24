@@ -31,7 +31,7 @@ Integration review branch `docs/ai-framework-init` is based on Build 11 stage 1 
 
 TEST-B11-001: владелец прислал 40,77 с записи Build 11; версия 11 видна, самопроверка 10/10 PASS (сумма 7464 мс), прежние два обязательства и итоги визуально неизменны, видны системный русский и авто-тёмная тема. [Отчёт](docs/testing/BUILD-11.ru.md), [контрольная точка](.ai-framework/checkpoints/TEST-B11-001.md). Модель/API и хеш APK не подтверждены, перезагрузка/обновление/системные переключения/лицензия не проверены. Запись не публикуется. R03.05/R03.07/R09.07 открыты, 15/68. PROJECT_ZERO остаётся draft; INIT-001 — следующий шаг согласования, не DEVELOP. Изменения только в review-ветке, без CI и кода.
 
-PROJECT_ZERO — блок 1 [PZ-01](.ai-framework/checkpoints/PZ-01.md), R01.06: сверены требования и целевая архитектура с Build 11, предложены три решения (объём alpha, сохранение архитектуры, CI-only или Wrapper первым). Ожидается явный ответ владельца; все PZ-01…04 открыты, approval=null, 15/68. Далее план миграции/платежей и безопасность. Не начинать DEVELOP и не объединять ветки. Новых Android-тестов нет.
+PROJECT_ZERO — блок 1 [PZ-01](.ai-framework/checkpoints/PZ-01.md), R01.06: владелец явно согласовал 68 пунктов, существующую архитектуру Android 8+ и CI-only до Wrapper. PZ-03 resolved (R01.05 не выполнен); scope/architecture/environment resolved, PZ-01 остаётся открыт до полной сверки R01.06. Следующий блок [PZ-02/PZ-04](.ai-framework/checkpoints/PZ-02.md): согласовать модель платежей, migration/rollback и политику безопасности. PROJECT_ZERO draft, approval=null, 15/68. Не начинать DEVELOP и не объединять ветки. Новых Android-тестов нет.
 
 ## 1. Где продолжать
 - Репозиторий: https://github.com/Ketarro/Credivaro (public, Apache 2.0 — проектная договорённость).
