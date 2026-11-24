@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "project_kind": "existing",
-  "status": "draft",
+  "status": "review",
   "topics": {
     "purpose": {
       "status": "resolved",
@@ -76,13 +76,13 @@
       "note": "ROADMAP/HANDOFF evidence, scope changes by owner; reset approval on material changes."
     },
     "task_readiness": {
-      "status": "open",
+      "status": "resolved",
       "source": {
         "kind": "file",
-        "value": "ROADMAP.md",
-        "note": "Единственный рабочий источник, старый ROADMAP PR #1 исторический."
+        "value": ".ai-framework/checkpoints/INIT-001.md",
+        "note": "Итоговая редакция 1, основанная на явных решениях блоков 1/2; требуется финальное согласование."
       },
-      "note": "R03.06/R04.01 ещё не назначать: зависимости, scope, migration rollback, тесты, права и критерии согласовать."
+      "note": "Определены порядок, DoR первой безопасной TEST/DOCS R03.05 и стоп-условия миграции/платежей; фактические зависимости проверять по каждой задаче. Не назначена реализация."
     },
     "uncertainty": {
       "status": "resolved",
@@ -94,36 +94,36 @@
       "note": "#6 workaround Samsung, #8 повторные замеры, UI/миграция/ARM/16 KiB; отслеживать в ROADMAP."
     },
     "complexity": {
-      "status": "open",
+      "status": "resolved",
       "source": {
-        "kind": "external",
-        "value": "https://github.com/Ketarro/Credivaro/blob/f23c514dfd1255bdcb5c6e5463a98f93c2f5c12b/docs/architecture/DECISIONS-v1.ru.md",
-        "note": "ADR-кандидаты и открытые решения; фактические решения HANDOFF и STORAGE-BUILD9; согласование R01.06 впереди.; закреплённая ревизия открытого PR, не утверждённый документ."
+        "kind": "file",
+        "value": ".ai-framework/checkpoints/INIT-001.md",
+        "note": "Итоговая редакция 1, основанная на явных решениях блоков 1/2; требуется финальное согласование."
       },
-      "note": "Согласовать минимальный платежный slice и отказ от лишних модулей; оценки/ресурсы не заданы."
+      "note": "Минимальный срез, без лишних модулей; этапы R03/R04/R05 без циклических зависимостей; цели будущих событий/напоминаний описаны для review."
     },
     "risks": {
-      "status": "open",
+      "status": "resolved",
       "source": {
-        "kind": "external",
-        "value": "https://github.com/Ketarro/Credivaro/blob/f23c514dfd1255bdcb5c6e5463a98f93c2f5c12b/docs/architecture/SECURITY-v1.ru.md",
-        "note": "Threat model; фактический аудит/контрмеры ещё R08.03–07; закреплённая ревизия открытого PR, не утверждённый документ."
+        "kind": "file",
+        "value": ".ai-framework/checkpoints/INIT-001.md",
+        "note": "Итоговая редакция 1, основанная на явных решениях блоков 1/2; требуется финальное согласование."
       },
-      "note": "Финансовые данные, миграция/ключ, backup/transfer, восстановление, независимый review; проверка R08 и rollback до реализации."
+      "note": "Владелец согласовал блок 2; критерии synthetic migration, fail-closed и forward-fix/восстановление, независимый review до распространения. Реальные меры и доказательства ещё задачи R03/R08/R09."
     }
   },
   "blockers": [
     {
       "id": "PZ-01",
-      "status": "open",
+      "status": "resolved",
       "description": "MVP/ADR/UX в PR #1–#4 не согласованы как единый baseline; R01.06 открыт.",
-      "next_step": "Базовые scope/architecture/environment решения согласованы владельцем. Сверить оставшиеся ADR/UX и закрепить итоговый план с PZ-02/PZ-04, без автоматического закрытия R01.06."
+      "next_step": "Сверка ADR/UX и расхождений с ROADMAP в итоговом плане INIT-001; требуется окончательное решение владельца, R01.06 не закрыт."
     },
     {
       "id": "PZ-02",
-      "status": "open",
+      "status": "resolved",
       "description": "R03.06/R04.01: не согласованы минимальная модель платежей, миграция, rollback, критерии и зависимости.",
-      "next_step": "Подготовить PLAN без кода, критерии T04–T07/T22, безопасный rollback и independent review."
+      "next_step": "Блок 2 согласован, scope и DoR/порядок в INIT-001; миграция/реализация не выполнены, отдельный допуск и доказательства перед задачами."
     },
     {
       "id": "PZ-03",
@@ -133,11 +133,11 @@
     },
     {
       "id": "PZ-04",
-      "status": "open",
+      "status": "resolved",
       "description": "Политика безопасности/восстановления и границы тестирования чувствительных данных не приняты для миграции; R08 открыт.",
-      "next_step": "Согласовать риски и безопасный план с синтетической БД; не разрешать реальную миграцию/данные до принятия."
+      "next_step": "Политика безопасности согласована в блоке 2, recovery/review и тестовые стоп-условия в INIT-001; reviewer и фактическая проверка ещё не выполнены, рискованные действия и распространение запрещены до них."
     }
   ],
-  "next_step": "Блок 2: получить решения владельца по PZ-02/PZ-04 (журнал платежей и распределение, явная зашифрованная миграция, политика восстановления и безопасных тестовых сборок), см. checkpoints/PZ-02.md. Затем сверить оставшиеся ADR, DoR, закрыть реальные пробелы, выполнить --proposal и получить отдельное согласование итогового плана. DEVELOP заблокирован.",
+  "next_step": "Итоговая редакция 1 в .ai-framework/checkpoints/INIT-001.md: выполнить --proposal, предъявить ревизию/отпечаток и получить явное итоговое подтверждение; затем --ready и отдельное согласование интеграции review-ветки/DoR первой R03.05. Реализация миграции не разрешена.",
   "approval": null
 }

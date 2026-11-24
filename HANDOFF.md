@@ -33,6 +33,8 @@ TEST-B11-001: владелец прислал 40,77 с записи Build 11; в
 
 PROJECT_ZERO — блок 1 [PZ-01](.ai-framework/checkpoints/PZ-01.md), R01.06: владелец явно согласовал 68 пунктов, существующую архитектуру Android 8+ и CI-only до Wrapper. PZ-03 resolved (R01.05 не выполнен); scope/architecture/environment resolved, PZ-01 остаётся открыт до полной сверки R01.06. Следующий блок [PZ-02/PZ-04](.ai-framework/checkpoints/PZ-02.md): согласовать модель платежей, migration/rollback и политику безопасности. PROJECT_ZERO draft, approval=null, 15/68. Не начинать DEVELOP и не объединять ветки. Новых Android-тестов нет.
 
+PROJECT_ZERO — блок 2 согласован: [PZ-02/PZ-04](.ai-framework/checkpoints/PZ-02.md). Итоговая редакция 1 [INIT-001](.ai-framework/checkpoints/INIT-001.md) в review: плановые темы 12/12, PZ-01…04 resolved на уровне подготовки; approval=null. Реальная готовность каждой задачи не подтверждена автоматически. Следующий шаг --proposal, окончательное решение владельца, --ready; отдельно согласовать интеграцию review-ветки, затем R03.05 TEST/DOCS (другой телефон, системные режимы, лицензия), до R03.06 закрыть зависимости и согласовать точный scope миграции. Reviewer не назначен; распространение миграционной сборки запрещено до независимого review и тестов восстановления. 15/68, новых Android-тестов/кода/CI нет.
+
 ## 1. Где продолжать
 - Репозиторий: https://github.com/Ketarro/Credivaro (public, Apache 2.0 — проектная договорённость).
 - Активная ветка: `feat/android-alpha-bootstrap`, [PR #5](https://github.com/Ketarro/Credivaro/pull/5), открыт, не merged.
