@@ -46,3 +46,19 @@ Xiaomi 17 partial manual test: signed update, settings, persisted records and ba
 
 ## Build 10 — stabilization (CI pending)
 Roadmap R09.01/R09.03/R03.05/R03.07, issues #7/#8. Build 9 on Xiaomi 17: first locale switch flickers after full reboot; storage approximately 10 s after reboot. Causes not proven. Build 10 uses native LocaleManager on API 33+, legacy AppCompat on API 26–32, requests language after closing dialog and two frame boundaries. Process-scoped storage Flow preserves ready state across activity recreation; one connection, no cryptographic/KDF/schema change. Debug-only process-local timings in About → Startup diagnostics: activity create/config, locale request, wrapped key/Keystore aggregate, native load, Room builder, DB open, first query, ready/frame; no data, key, file path, network or telemetry. Timing stages do not separately identify internal KDF or keystore suboperations. No measured speedup claimed. Original license unchanged, localized explanation added. Semantic UI actions avoid emulator touch injection; add locale switch/recreate test; physical gestures still require manual tests. Push CI #37 API29 install/launch successful but upgrade live PID check failed, cause unknown; PR #38 passed. Build 10 CI records crash log before PID failure and requires storage.ready, tests signed Build 9→10 with preserved wrapped key hash and initialized DB (not yet proof of financial record migration). Baseline artifact expires; skip documented if unavailable. VersionName unchanged, versionCode 10. Roadmap progress 14/68; no points closed until verification.
+
+## CI and first physical timing samples — 2026-11-24
+[Push #39](https://github.com/Ketarro/Credivaro/actions/runs/45415653884) and [PR #40](https://github.com/Ketarro/Credivaro/actions/runs/45415673746) successful for `0c83ac7f51e9b5e9103649f2f3ce900211baf2fd`. Push 8/8 jobs; 5 storage + 2 UI tests each on API 26/36 (14/14). Signed Build 9→10 update, retained sandbox and wrapped key hash, storage readiness passed on API 26/28/29/30/36 (5/5); not proof of preservation of populated financial records or physical reboot. [Signed Build 10](https://github.com/Ketarro/Credivaro/actions/runs/45415653884/artifacts/14931893030), APK SHA-256 `777900af69ebb2bdaaddd252163ca0c65e8a82f4460ef4d0dd861dff9090a404`.
+Owner supplied two Build 10 diagnostics screenshots (device assumed Xiaomi 17 from preceding context; exact launch conditions unconfirmed). Only numerical transcriptions retained, no screenshots committed.
+
+| Stage | 18:10 ms | 18:08 ms |
+|---|---:|---:|
+| keystoreEnvelope | 23 | 14 |
+| nativeLoad | 16 | 5 |
+| roomBuilder | 44 | 5 |
+| databaseOpen | 1955 | 380 |
+| firstQuery | 44 | 21 |
+| storage.ready (duration) | 2084 | 426 |
+| activity.storageReadyFrame (relative timestamp) | 2189 | 484 |
+
+DB open accounts for ~94% / 89% of storage duration. It includes SQLCipher/SQLite open and Room checks; internal KDF vs IO vs other causes not isolated. 18:08 locale request 15386→15392 return→15397 config changed (11 ms); 18022→18025→18030 (8 ms); third request at 29904, following entries not visible. No new activity.create visible for these first two switches; this cannot prove no visual flicker. No ten-second delay reproduced in these samples; whether either followed reboot or force-stop and whether flicker persists remain unknown. Do not weaken crypto or claim resolution. Ask owner which run followed reboot and whether first switch flickered; compare repeated cold/warm timings. R03.05, R03.07, R09.01, R09.03 remain open; no progress change. No code/version changes in this follow-up.
