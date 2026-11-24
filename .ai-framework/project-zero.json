@@ -1,0 +1,143 @@
+{
+  "schema_version": 1,
+  "project_kind": "existing",
+  "status": "draft",
+  "topics": {
+    "purpose": {
+      "status": "resolved",
+      "source": {
+        "kind": "file",
+        "value": "README.md",
+        "note": "Development / Разработка; цель продукта дополнена project brief PR #1."
+      },
+      "note": "Локальный учёт долгов и планирование; критерии первого alpha R10, финансовые факты отдельно от оценок."
+    },
+    "scope": {
+      "status": "open",
+      "source": {
+        "kind": "external",
+        "value": "https://github.com/Ketarro/Credivaro/blob/e8490bb994bedb91c1442b39aabb1c7e7f5690ea/docs/requirements/PRODUCT-SPEC-v1.ru.md",
+        "note": "OB/PAY/CAL/REM/UI/SEC; границы MVP, FINANCIAL-RULES отдельный связанный источник; закреплённая ревизия открытого PR, не утверждённый документ."
+      },
+      "note": "R01.06: требования и предложенные исключения в открытых PR, явное согласование плана необходимо."
+    },
+    "prototype": {
+      "status": "resolved",
+      "source": {
+        "kind": "file",
+        "value": "docs/testing/BUILD-10.ru.md",
+        "note": ""
+      },
+      "note": "Фактический working slice, 28/31 на Xiaomi 17, неполная проверка системных режимов/лицензии; дизайн PR #4 предложен."
+    },
+    "architecture": {
+      "status": "open",
+      "source": {
+        "kind": "external",
+        "value": "https://github.com/Ketarro/Credivaro/blob/f23c514dfd1255bdcb5c6e5463a98f93c2f5c12b/docs/architecture/SYSTEM-DESIGN-v1.ru.md",
+        "note": "Целевая архитектура; фактические модули settings.gradle.kts, bootstrap и STORAGE-BUILD9.; закреплённая ревизия открытого PR, не утверждённый документ."
+      },
+      "note": "Фактические 3 модуля и v1; ADR target/границы миграции и event engine требуют review."
+    },
+    "autonomy": {
+      "status": "resolved",
+      "source": {
+        "kind": "file",
+        "value": "AGENTS.md",
+        "note": "Корневой вход; действующие правила сохранены и ENTRYPOINT подключён."
+      },
+      "note": "INIT/AUDIT/DOCS в разрешённом scope; no DEVELOP до approval; рискованные действия, main/merge/release и инфраструктура только явно."
+    },
+    "regression": {
+      "status": "resolved",
+      "source": {
+        "kind": "file",
+        "value": "docs/testing/BUILD-10.ru.md",
+        "note": ""
+      },
+      "note": "Build 10 owner 28/31; CI #49/#50 Build 11 этап 1 green; полная приёмка/миграция/реальное устройство пока впереди."
+    },
+    "environment": {
+      "status": "open",
+      "source": {
+        "kind": "file",
+        "value": "docs/ANDROID-BOOTSTRAP.md",
+        "note": "Android bootstrap, версии/сборка; реальная конфигурация Gradle/CI, wrapper отсутствует R01.05."
+      },
+      "note": "CI Gradle 8.13/JDK17/SDK36; wrapper отсутствует, локальная среда заблокирована; согласовать воспроизводимость или CI-only план."
+    },
+    "changes": {
+      "status": "resolved",
+      "source": {
+        "kind": "file",
+        "value": "AGENTS.md",
+        "note": "Scope, Quality gates и новый раздел AI_FRAMEWORK; действующий HANDOFF и .ai-framework/MODES.md."
+      },
+      "note": "ROADMAP/HANDOFF evidence, scope changes by owner; reset approval on material changes."
+    },
+    "task_readiness": {
+      "status": "open",
+      "source": {
+        "kind": "file",
+        "value": "ROADMAP.md",
+        "note": "Единственный рабочий источник, старый ROADMAP PR #1 исторический."
+      },
+      "note": "R03.06/R04.01 ещё не назначать: зависимости, scope, migration rollback, тесты, права и критерии согласовать."
+    },
+    "uncertainty": {
+      "status": "resolved",
+      "source": {
+        "kind": "file",
+        "value": "HANDOFF.md",
+        "note": "Единственный живой handoff; история и текущая точка."
+      },
+      "note": "#6 workaround Samsung, #8 повторные замеры, UI/миграция/ARM/16 KiB; отслеживать в ROADMAP."
+    },
+    "complexity": {
+      "status": "open",
+      "source": {
+        "kind": "external",
+        "value": "https://github.com/Ketarro/Credivaro/blob/f23c514dfd1255bdcb5c6e5463a98f93c2f5c12b/docs/architecture/DECISIONS-v1.ru.md",
+        "note": "ADR-кандидаты и открытые решения; фактические решения HANDOFF и STORAGE-BUILD9; согласование R01.06 впереди.; закреплённая ревизия открытого PR, не утверждённый документ."
+      },
+      "note": "Согласовать минимальный платежный slice и отказ от лишних модулей; оценки/ресурсы не заданы."
+    },
+    "risks": {
+      "status": "open",
+      "source": {
+        "kind": "external",
+        "value": "https://github.com/Ketarro/Credivaro/blob/f23c514dfd1255bdcb5c6e5463a98f93c2f5c12b/docs/architecture/SECURITY-v1.ru.md",
+        "note": "Threat model; фактический аудит/контрмеры ещё R08.03–07; закреплённая ревизия открытого PR, не утверждённый документ."
+      },
+      "note": "Финансовые данные, миграция/ключ, backup/transfer, восстановление, независимый review; проверка R08 и rollback до реализации."
+    }
+  },
+  "blockers": [
+    {
+      "id": "PZ-01",
+      "status": "open",
+      "description": "MVP/ADR/UX в PR #1–#4 не согласованы как единый baseline; R01.06 открыт.",
+      "next_step": "Сверить расхождения и утвердить границы/решения с владельцем; сохранить ревизии."
+    },
+    {
+      "id": "PZ-02",
+      "status": "open",
+      "description": "R03.06/R04.01: не согласованы минимальная модель платежей, миграция, rollback, критерии и зависимости.",
+      "next_step": "Подготовить PLAN без кода, критерии T04–T07/T22, безопасный rollback и independent review."
+    },
+    {
+      "id": "PZ-03",
+      "status": "open",
+      "description": "Воспроизводимость и среда: Gradle Wrapper отсутствует, локальная проверка Android не доступна, CI baseline отдельно.",
+      "next_step": "Согласовать CI-only до R01.05 либо план wrapper; не менять инфраструктуру без разрешения."
+    },
+    {
+      "id": "PZ-04",
+      "status": "open",
+      "description": "Политика безопасности/восстановления и границы тестирования чувствительных данных не приняты для миграции; R08 открыт.",
+      "next_step": "Согласовать риски и безопасный план с синтетической БД; не разрешать реальную миграцию/данные до принятия."
+    }
+  ],
+  "next_step": "Согласовать с владельцем R01.06: границы MVP и целевые требования/ADR из PR #1–#4, политику безопасной миграции и Definition of Ready R03.06/R04.01; завершить аудит и проверить --proposal перед явным утверждением.",
+  "approval": null
+}
