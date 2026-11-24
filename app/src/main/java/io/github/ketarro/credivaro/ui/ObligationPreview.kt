@@ -2,6 +2,18 @@ package io.github.ketarro.credivaro.ui
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.ui.focus.FocusDirection
+import androidx.compose.ui.semantics.heading
+
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.text.KeyboardOptions
@@ -44,27 +56,96 @@ private fun Money.raw(): String = BigDecimal.valueOf(minorUnits, Currency.getIns
         .format(BigDecimal(raw()))
 }
 
+private fun typeIcon(type: ObligationType): Int = when (type) {
+    ObligationType.LOAN -> R.drawable.ic_loan
+    ObligationType.CREDIT_CARD -> R.drawable.ic_credit_card
+    ObligationType.INSTALLMENT -> R.drawable.ic_installment
+    ObligationType.OTHER -> R.drawable.ic_wallet
+}
+
+private fun Obligation.payment(): Money? = when (val t = terms) {
+    is ObligationTerms.Loan -> t.scheduledPayment
+    is ObligationTerms.CreditCard -> t.minimumPayment
+    is ObligationTerms.Installment -> t.installmentAmount
+    is ObligationTerms.Other -> null
+}
+private fun Obligation.paymentDate(): LocalDate? = when (val t = terms) {
+    is ObligationTerms.Loan -> t.firstDueDate
+    is ObligationTerms.CreditCard -> t.minimumPaymentDueDate
+    is ObligationTerms.Installment -> t.firstDueDate
+    is ObligationTerms.Other -> null
+}
+@Composable
+private fun LocalDate.displayDate(): String {
+    val locale = LocalConfiguration.current.locales[0] ?: Locale.ENGLISH
+    return format(java.time.format.DateTimeFormatter.ofLocalizedDate(java.time.format.FormatStyle.MEDIUM).withLocale(locale))
+}
+@Composable
+private fun PreviewNotice() {
+    val colors = MaterialTheme.colorScheme
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Icon(painterResource(R.drawable.ic_info), null, tint = colors.onSurfaceVariant, modifier = Modifier.size(20.dp))
+        Text(stringResource(R.string.preview_session), color = colors.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
+    }
+}
+
 @Composable
 fun PreviewDashboard(records: List<Obligation>, open: () -> Unit) {
     val colors = MaterialTheme.colorScheme
+    val summary = summarizePreview(records)
     Card(shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = colors.primaryContainer, contentColor = colors.onPrimaryContainer)) {
-        Column(Modifier.fillMaxWidth().padding(20.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(stringResource(R.string.known_test_balances), style = MaterialTheme.typography.titleMedium)
-            if (records.isEmpty()) Text(stringResource(R.string.empty_obligations))
-            records.mapNotNull { it.balance?.totalDebt }.groupBy { it.currency }.toSortedMap().forEach { (code, values) ->
-                val total = runCatching { values.fold(Money(code, 0)) { a, b -> a + b } }.getOrNull()
-                Text(if (total == null) stringResource(R.string.preview_overflow) else total.display(),
+            if (records.isEmpty()) Text(stringResource(R.string.empty_obligations), style = MaterialTheme.typography.bodyMedium)
+            if (records.isNotEmpty() && summary.totals.isEmpty()) Text(stringResource(R.string.not_set), style = MaterialTheme.typography.headlineSmall)
+            summary.totals.forEach { (code, total) ->
+                Text(if (total == null) stringResource(R.string.preview_currency_overflow, code) else total.display(),
                     style = MaterialTheme.typography.headlineSmall)
             }
             if (records.isNotEmpty()) {
-                Text(stringResource(R.string.record_count, records.size))
-                Text(stringResource(R.string.missing_balances, records.count { it.balance?.totalDebt == null }),
-                    style = MaterialTheme.typography.bodySmall)
+                Text(pluralStringResource(R.plurals.obligation_count, records.size, records.size), style = MaterialTheme.typography.bodyMedium)
+                if (summary.unknown > 0) Text(stringResource(R.string.missing_balances, summary.unknown), style = MaterialTheme.typography.bodySmall)
             }
-            Button(onClick = open, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.view_obligations)) }
+            TextButton(onClick = open, modifier = Modifier.align(Alignment.End)) {
+                Text(stringResource(if (records.isEmpty()) R.string.add_obligation else R.string.view_obligations))
+                Spacer(Modifier.width(4.dp))
+                Icon(painterResource(R.drawable.ic_chevron), null, modifier = Modifier.size(16.dp))
+            }
         }
     }
-    Text(stringResource(R.string.preview_session), color = colors.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
+    PreviewNotice()
+}
+
+@Composable
+private fun ObligationListCard(item: Obligation, open: () -> Unit) {
+    val colors = MaterialTheme.colorScheme
+    Card(onClick = open, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = colors.surface)) {
+        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Surface(shape = RoundedCornerShape(10.dp), color = colors.secondaryContainer) {
+                    Icon(painterResource(typeIcon(item.type)), null, tint = colors.onSecondaryContainer, modifier = Modifier.padding(9.dp).size(22.dp))
+                }
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Text(item.title, style = MaterialTheme.typography.titleMedium)
+                    Text(stringResource(typeLabel(item.type)), style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant)
+                    item.lender?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant) }
+                }
+                Icon(painterResource(R.drawable.ic_chevron), null, tint = colors.onSurfaceVariant, modifier = Modifier.size(20.dp))
+            }
+            Text(stringResource(R.string.form_balance), style = MaterialTheme.typography.labelMedium, color = colors.onSurfaceVariant)
+            Text(item.balance?.totalDebt.display(), style = MaterialTheme.typography.titleLarge)
+            val payment = item.payment()
+            val date = item.paymentDate()
+            if (payment != null || date != null) {
+                HorizontalDivider(color = colors.outlineVariant)
+                Text(stringResource(if (item.type == ObligationType.CREDIT_CARD) R.string.form_minimum else R.string.form_payment),
+                    style = MaterialTheme.typography.labelMedium, color = colors.onSurfaceVariant)
+                if (payment != null) Text(payment.display(), style = MaterialTheme.typography.bodyMedium)
+                if (date != null) Text(date.displayDate(), style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant)
+            }
+        }
+    }
 }
 
 @Composable
@@ -77,7 +158,6 @@ fun ObligationPreview(records: MutableList<Obligation>) {
     BackHandler(editor || detailId != null) {
         if (editor) editor = false else detailId = null
     }
-    Text(stringResource(R.string.preview_session), color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
     if (editor) {
         PreviewEditor(editing, onCancel = { editor = false }) { value ->
             val index = records.indexOfFirst { it.id == value.id }
@@ -93,21 +173,24 @@ fun ObligationPreview(records: MutableList<Obligation>) {
                 Text(stringResource(typeLabel(detail.type)))
                 detail.lender?.let { Text(it) }
                 Text(detail.balance?.totalDebt.display(), style = MaterialTheme.typography.headlineMedium)
-                detail.balance?.let { Text(stringResource(R.string.preview_balance_date, it.bankAsOf.toString())) }
+                detail.balance?.let { Text(stringResource(R.string.preview_balance_date, it.bankAsOf.displayDate())) }
+                detail.paymentDate()?.let { Text(stringResource(R.string.field_due_date) + ": " + it.displayDate()) }
+                detail.notes?.let { Text(stringResource(R.string.field_notes), style = MaterialTheme.typography.labelMedium); Text(it) }
                 val rate = when (val t = detail.terms) {
                     is ObligationTerms.Loan -> t.annualRate
                     is ObligationTerms.CreditCard -> t.annualRate
                     is ObligationTerms.Installment -> t.annualRate
                     is ObligationTerms.Other -> null
                 }
-                Text(stringResource(R.string.field_rate) + ": " + (rate?.percent?.toPlainString() ?: stringResource(R.string.not_set)))
+                Text(stringResource(R.string.form_rate) + ": " + (rate?.percent?.toPlainString() ?: stringResource(R.string.not_set)))
                 when (val t = detail.terms) {
-                    is ObligationTerms.Loan -> Text(stringResource(R.string.field_payment) + ": " + t.scheduledPayment.display())
+                    is ObligationTerms.Loan -> Text(stringResource(R.string.form_payment) + ": " + t.scheduledPayment.display())
                     is ObligationTerms.CreditCard -> {
-                        Text(stringResource(R.string.field_limit) + ": " + t.creditLimit.display())
-                        Text(stringResource(R.string.field_minimum) + ": " + t.minimumPayment.display())
+                        Text(stringResource(R.string.form_limit) + ": " + t.creditLimit.display())
+                        Text(stringResource(R.string.form_minimum) + ": " + t.minimumPayment.display())
+                        t.cashFeeFreeLimit?.let { Text(stringResource(R.string.field_cash_limit) + ": " + it.display()) }
                     }
-                    is ObligationTerms.Installment -> Text(stringResource(R.string.field_payment) + ": " + t.installmentAmount.display())
+                    is ObligationTerms.Installment -> Text(stringResource(R.string.form_payment) + ": " + t.installmentAmount.display())
                     is ObligationTerms.Other -> Unit
                 }
             }
@@ -120,18 +203,11 @@ fun ObligationPreview(records: MutableList<Obligation>) {
             confirmButton = { TextButton(onClick = { records.removeAll { it.id == detail.id }; detailId = null; deleting = false }) { Text(stringResource(R.string.delete)) } },
             dismissButton = { TextButton(onClick = { deleting = false }) { Text(stringResource(R.string.cancel)) } })
     } else {
-        Text(stringResource(R.string.obligations_title), style = MaterialTheme.typography.headlineSmall)
-        if (records.isEmpty()) Text(stringResource(R.string.empty_obligations))
-        records.forEach { item ->
-            Card(onClick = { detailId = item.id }, modifier = Modifier.fillMaxWidth()) {
-                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text(item.title, style = MaterialTheme.typography.titleMedium)
-                    Text(stringResource(typeLabel(item.type)), style = MaterialTheme.typography.bodySmall)
-                    Text(item.balance?.totalDebt.display(), style = MaterialTheme.typography.titleLarge)
-                }
-            }
-        }
+        Text(stringResource(R.string.obligations_title), style = MaterialTheme.typography.headlineSmall, modifier = Modifier.semantics { heading() })
         Button(onClick = { editing = null; editor = true }, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.add_obligation)) }
+        if (records.isEmpty()) Text(stringResource(R.string.empty_obligations))
+        records.forEach { item -> ObligationListCard(item) { detailId = item.id } }
+        PreviewNotice()
     }
 }
 
@@ -156,37 +232,74 @@ private fun PreviewEditor(existing: Obligation?, onCancel: () -> Unit, onSave: (
         else -> null
     }?.raw().orEmpty()) }
     var limit by remember { mutableStateOf((oldTerms as? ObligationTerms.CreditCard)?.creditLimit?.raw().orEmpty()) }
+    var notes by remember { mutableStateOf(existing?.notes.orEmpty()) }
+    var due by remember { mutableStateOf(existing?.paymentDate()?.toString().orEmpty()) }
+    var cashLimit by remember { mutableStateOf((oldTerms as? ObligationTerms.CreditCard)?.cashFeeFreeLimit?.raw().orEmpty()) }
+    var expanded by remember { mutableStateOf(false) }
+    var currencyMenu by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf(false) }
     val focusManager = LocalFocusManager.current
     Text(stringResource(if (existing == null) R.string.add_obligation else R.string.edit_obligation), style = MaterialTheme.typography.headlineSmall)
-    Text(stringResource(R.string.field_type), style = MaterialTheme.typography.titleMedium)
-    Column(Modifier.selectableGroup()) {
-        ObligationType.entries.forEach { choice ->
-            Row(Modifier.fillMaxWidth().heightIn(min = 48.dp).selectable(selected = type == choice,
-                enabled = existing == null, role = Role.RadioButton, onClick = { if (type != choice) { type = choice; rate = ""; payment = ""; limit = "" } }),
-                verticalAlignment = Alignment.CenterVertically) {
-                RadioButton(selected = type == choice, onClick = null, enabled = existing == null)
-                Text(stringResource(typeLabel(choice)))
+    PreviewNotice()
+    Text(stringResource(R.string.form_required_hint), style = MaterialTheme.typography.bodySmall)
+    FormSection(R.string.form_basics) {
+        Text(stringResource(R.string.field_type), style = MaterialTheme.typography.labelLarge)
+        Column(Modifier.selectableGroup()) {
+            ObligationType.entries.forEach { choice ->
+                Row(Modifier.fillMaxWidth().heightIn(min = 48.dp).selectable(selected = type == choice,
+                    enabled = existing == null, role = Role.RadioButton, onClick = {
+                        if (type != choice) { type = choice; rate = ""; payment = ""; limit = ""; due = ""; cashLimit = "" }
+                    }), verticalAlignment = Alignment.CenterVertically) {
+                    RadioButton(selected = type == choice, onClick = null, enabled = existing == null)
+                    Spacer(Modifier.width(12.dp))
+                    Icon(painterResource(typeIcon(choice)), null, modifier = Modifier.size(20.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text(stringResource(typeLabel(choice)), style = MaterialTheme.typography.bodyMedium)
+                }
+            }
+        }
+        StaticField(title, { title = it.take(120) }, R.string.field_title, optional = false)
+        StaticField(lender, { lender = it.take(120) }, R.string.form_lender)
+        Text(stringResource(R.string.field_currency), style = MaterialTheme.typography.labelLarge)
+        Box {
+            OutlinedButton(onClick = { currencyMenu = true }, enabled = existing == null, modifier = Modifier.fillMaxWidth()) {
+                Text(currency, Modifier.weight(1f))
+                Icon(painterResource(R.drawable.ic_chevron), null, modifier = Modifier.size(18.dp))
+            }
+            DropdownMenu(expanded = currencyMenu, onDismissRequest = { currencyMenu = false }) {
+                currencies.forEach { code ->
+                    DropdownMenuItem(text = { Text(code) }, onClick = {
+                        if (currency != code) { currency = code; balance = ""; payment = ""; limit = ""; cashLimit = "" }
+                        currencyMenu = false
+                    })
+                }
             }
         }
     }
-    StaticField(title, { title = it.take(120) }, R.string.field_title, optional = false)
-    StaticField(lender, { lender = it.take(120) }, R.string.form_lender)
-    Text(stringResource(R.string.field_currency))
-    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-        currencies.forEach { code ->
-            FilterChip(selected = currency == code, onClick = { if (currency != code) { currency = code; balance = ""; payment = ""; limit = "" } },
-                label = { Text(code) }, enabled = existing == null)
+    FormSection(R.string.form_finances) {
+        AmountField(balance, { balance = it }, R.string.form_balance)
+        if (type != ObligationType.OTHER) {
+            AmountField(payment, { payment = it }, if (type == ObligationType.CREDIT_CARD) R.string.form_minimum else R.string.form_payment)
+            AmountField(rate, { rate = it }, R.string.form_rate)
+        }
+        if (type == ObligationType.CREDIT_CARD) AmountField(limit, { limit = it }, R.string.form_limit)
+        Text(stringResource(R.string.field_amount_hint), style = MaterialTheme.typography.bodySmall)
+    }
+    OutlinedButton(onClick = { expanded = !expanded }, modifier = Modifier.fillMaxWidth()) {
+        Text(stringResource(if (expanded) R.string.form_hide_additional else R.string.form_additional), Modifier.weight(1f))
+        Icon(painterResource(R.drawable.ic_chevron), null, modifier = Modifier.size(18.dp))
+    }
+    if (expanded) {
+        FormSection(R.string.form_additional) {
+            if (type != ObligationType.OTHER) {
+                StaticField(due, { due = it.take(10) }, R.string.field_due_date)
+                Text(stringResource(R.string.field_date_hint), style = MaterialTheme.typography.bodySmall)
+            }
+            if (type == ObligationType.CREDIT_CARD) AmountField(cashLimit, { cashLimit = it }, R.string.field_cash_limit)
+            StaticField(notes, { notes = it.take(500) }, R.string.field_notes)
+            Text(stringResource(R.string.preview_bank_zone), style = MaterialTheme.typography.bodySmall)
         }
     }
-    AmountField(balance, { balance = it }, R.string.form_balance)
-    if (type != ObligationType.OTHER) {
-        AmountField(rate, { rate = it }, R.string.form_rate)
-        AmountField(payment, { payment = it }, if (type == ObligationType.CREDIT_CARD) R.string.form_minimum else R.string.form_payment)
-    }
-    if (type == ObligationType.CREDIT_CARD) AmountField(limit, { limit = it }, R.string.form_limit)
-    Text(stringResource(R.string.field_amount_hint), style = MaterialTheme.typography.bodySmall)
-    Text(stringResource(R.string.preview_bank_zone), style = MaterialTheme.typography.bodySmall)
     if (error) Text(stringResource(R.string.invalid_fields), color = MaterialTheme.colorScheme.error)
     Button(modifier = Modifier.fillMaxWidth(), onClick = {
         val result = runCatching {
@@ -196,14 +309,20 @@ private fun PreviewEditor(existing: Obligation?, onCancel: () -> Unit, onSave: (
             val amount = parsePreviewMoney(balance, c)
             val p = parsePreviewMoney(payment, c)
             val annual = parsePreviewRate(rate)?.let { AnnualRate(it) }
+            val date = parsePreviewDate(due)
             val terms = when (type) {
-                ObligationType.LOAN -> ObligationTerms.Loan(annualRate = annual, scheduledPayment = p)
-                ObligationType.CREDIT_CARD -> ObligationTerms.CreditCard(creditLimit = parsePreviewMoney(limit, c), annualRate = annual, minimumPayment = p)
-                ObligationType.INSTALLMENT -> ObligationTerms.Installment(installmentAmount = p, annualRate = annual)
-                ObligationType.OTHER -> ObligationTerms.Other()
+                ObligationType.LOAN -> ((oldTerms as? ObligationTerms.Loan) ?: ObligationTerms.Loan()).copy(annualRate = annual, scheduledPayment = p, firstDueDate = date)
+                ObligationType.CREDIT_CARD -> ((oldTerms as? ObligationTerms.CreditCard) ?: ObligationTerms.CreditCard()).copy(
+                    creditLimit = parsePreviewMoney(limit, c), annualRate = annual, minimumPayment = p,
+                    minimumPaymentDueDate = date, cashFeeFreeLimit = parsePreviewMoney(cashLimit, c))
+                ObligationType.INSTALLMENT -> ((oldTerms as? ObligationTerms.Installment) ?: ObligationTerms.Installment()).copy(installmentAmount = p, annualRate = annual, firstDueDate = date)
+                ObligationType.OTHER -> (oldTerms as? ObligationTerms.Other) ?: ObligationTerms.Other()
             }
-            val value = Obligation(existing?.id ?: UUID.randomUUID(), title.trim(), lender.trim().takeIf { it.isNotEmpty() }, c, zone,
-                terms = terms, balance = amount?.let { if (it == existing?.balance?.totalDebt) existing?.balance else BalanceSnapshot(today, totalDebt = it) })
+            val snapshot = if (amount == existing?.balance?.totalDebt) existing?.balance else
+                amount?.let { BalanceSnapshot(today, totalDebt = it) }
+            val value = (existing ?: Obligation(UUID.randomUUID(), title.trim(), currency = c, bankZone = zone, terms = terms)).copy(
+                title = title.trim(), lender = lender.trim().takeIf { it.isNotEmpty() },
+                terms = terms, balance = snapshot, notes = notes.trim().takeIf { it.isNotEmpty() })
             require(ObligationValidator.validate(value, today).isEmpty())
             value
         }.getOrNull()
@@ -218,21 +337,34 @@ private fun AmountField(value: String, update: (String) -> Unit, label: Int) {
 }
 
 @Composable
+private fun FormSection(title: Int, content: @Composable ColumnScope.() -> Unit) {
+    Card(shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
+        Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Text(stringResource(title), style = MaterialTheme.typography.titleMedium, modifier = Modifier.semantics { heading() })
+            content()
+        }
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
 private fun StaticField(value: String, update: (String) -> Unit, label: Int,
     optional: Boolean = true, keyboardType: KeyboardType = KeyboardType.Text) {
     val title = stringResource(label)
     val optionalLabel = stringResource(R.string.form_optional)
     val accessibleLabel = if (optional) stringResource(R.string.form_accessible_optional, title, optionalLabel) else title
-    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Row(Modifier.fillMaxWidth().clearAndSetSemantics {},
-            verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(title, Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
-            if (optional) Text(optionalLabel, style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
+    val requester = remember { BringIntoViewRequester() }
+    var focused by remember { mutableStateOf(false) }
+    val ime = WindowInsets.ime.getBottom(LocalDensity.current)
+    val focusManager = LocalFocusManager.current
+    LaunchedEffect(focused, ime) { if (focused) requester.bringIntoView() }
+    Column(Modifier.fillMaxWidth().bringIntoViewRequester(requester), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text(if (optional) title else "$title *", Modifier.clearAndSetSemantics {}, style = MaterialTheme.typography.bodyMedium)
         OutlinedTextField(value = value, onValueChange = update,
-            modifier = Modifier.fillMaxWidth().semantics { contentDescription = accessibleLabel },
+            modifier = Modifier.fillMaxWidth().onFocusChanged { focused = it.isFocused }
+                .semantics { contentDescription = accessibleLabel },
             singleLine = true, shape = RoundedCornerShape(12.dp),
-            keyboardOptions = KeyboardOptions(keyboardType = keyboardType))
+            keyboardOptions = KeyboardOptions(keyboardType = keyboardType, imeAction = ImeAction.Next),
+            keyboardActions = KeyboardActions(onNext = { if (!focusManager.moveFocus(FocusDirection.Next)) focusManager.clearFocus() }))
     }
 }

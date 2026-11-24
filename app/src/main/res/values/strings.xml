@@ -35,7 +35,7 @@
     <string name="cancel">Cancel</string>
     <string name="obligations_nav">Debts</string>
     <string name="obligations_title">Obligations</string>
-    <string name="preview_session">Test workspace · changes are not stored after the activity is recreated or closed. Use fictional data only.</string>
+    <string name="preview_session">Test only. Records are held in memory and may disappear when the app closes or the screen is recreated. Use fictional data.</string>
     <string name="add_obligation">Add obligation</string>
     <string name="edit_obligation">Edit obligation</string>
     <string name="delete_obligation">Delete obligation</string>
@@ -56,10 +56,10 @@
     <string name="field_limit">Credit limit (optional)</string>
     <string name="invalid_fields">Check the name and amounts. Use non-negative numbers with valid currency precision.</string>
     <string name="not_set">Not set</string>
-    <string name="known_test_balances">Known test balances</string>
+    <string name="known_test_balances">Test debt balances</string>
     <string name="missing_balances">Unknown balances: %1$d</string>
     <string name="empty_obligations">No obligations yet. Add a fictional record to test the workflow.</string>
-    <string name="view_obligations">Manage obligations</string>
+    <string name="view_obligations">View obligations</string>
     <string name="record_count">Records: %1$d</string>
     <string name="test_details">Test record</string>
     <string name="preview_balance_date">Balance date: %1$s</string>
@@ -80,4 +80,16 @@
     <string name="form_limit">Credit limit</string>
     <string name="form_optional">Optional</string>
     <string name="form_accessible_optional">%1$s, %2$s</string>
+    <string name="system_language_value">System (%1$s)</string>
+    <string name="form_required_hint">Only fields marked * are required.</string>
+    <string name="form_basics">Basic information</string>
+    <string name="form_finances">Financial terms</string>
+    <string name="form_additional">Additional terms</string>
+    <string name="form_hide_additional">Hide additional terms</string>
+    <string name="field_due_date">Payment date</string>
+    <string name="field_date_hint">Date format: YYYY-MM-DD. This does not schedule a reminder.</string>
+    <string name="field_cash_limit">Fee-free cash withdrawal limit</string>
+    <string name="field_notes">Notes</string>
+    <string name="preview_currency_overflow">%1$s: total exceeds supported range</string>
+    <plurals name="obligation_count"><item quantity="one">%d obligation</item><item quantity="other">%d obligations</item></plurals>
 </resources>

@@ -35,7 +35,7 @@
     <string name="cancel">Отмена</string>
     <string name="obligations_nav">Долги</string>
     <string name="obligations_title">Обязательства</string>
-    <string name="preview_session">Тестовый режим · записи не сохраняются после закрытия или пересоздания экрана приложения. Используйте вымышленные данные.</string>
+    <string name="preview_session">Тестовый режим. Записи хранятся в памяти и могут исчезнуть при закрытии или пересоздании экрана. Используйте вымышленные данные.</string>
     <string name="add_obligation">Добавить обязательство</string>
     <string name="edit_obligation">Редактировать</string>
     <string name="delete_obligation">Удалить обязательство</string>
@@ -56,10 +56,10 @@
     <string name="field_limit">Кредитный лимит (необязательно)</string>
     <string name="invalid_fields">Проверьте название и суммы. Введите неотрицательные числа с допустимой точностью валюты.</string>
     <string name="not_set">Не указано</string>
-    <string name="known_test_balances">Известные тестовые остатки</string>
+    <string name="known_test_balances">Тестовая задолженность</string>
     <string name="missing_balances">Неизвестных остатков: %1$d</string>
     <string name="empty_obligations">Обязательств пока нет. Добавьте вымышленную запись для проверки.</string>
-    <string name="view_obligations">Управлять обязательствами</string>
+    <string name="view_obligations">К обязательствам</string>
     <string name="record_count">Записей: %1$d</string>
     <string name="test_details">Тестовая запись</string>
     <string name="preview_balance_date">Дата остатка: %1$s</string>
@@ -80,4 +80,16 @@
     <string name="form_limit">Кредитный лимит</string>
     <string name="form_optional">Необязательно</string>
     <string name="form_accessible_optional">%1$s, %2$s</string>
+    <string name="system_language_value">Как в системе (%1$s)</string>
+    <string name="form_required_hint">Обязательны только поля со знаком *.</string>
+    <string name="form_basics">Основная информация</string>
+    <string name="form_finances">Финансовые условия</string>
+    <string name="form_additional">Дополнительные условия</string>
+    <string name="form_hide_additional">Скрыть дополнительные условия</string>
+    <string name="field_due_date">Дата платежа</string>
+    <string name="field_date_hint">Формат даты: ГГГГ-ММ-ДД. Напоминание не создаётся.</string>
+    <string name="field_cash_limit">Лимит снятия без комиссии</string>
+    <string name="field_notes">Примечание</string>
+    <string name="preview_currency_overflow">%1$s: итог превышает допустимый диапазон</string>
+    <plurals name="obligation_count"><item quantity="one">%d обязательство</item><item quantity="few">%d обязательства</item><item quantity="many">%d обязательств</item><item quantity="other">%d обязательства</item></plurals>
 </resources>

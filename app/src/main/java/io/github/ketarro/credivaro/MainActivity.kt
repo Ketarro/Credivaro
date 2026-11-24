@@ -197,7 +197,6 @@ private fun AlphaScreen(
                     BrandHeader(dark)
                     Text(stringResource(R.string.tagline), color = colors.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
                     PreviewDashboard(records) { obligations = true; settings = false; about = false }
-                    AlphaNotice()
                 }
             }
         }
@@ -336,7 +335,7 @@ private fun PersonalizationCard(
         else -> systemLanguage.getDisplayLanguage(systemLanguage).ifBlank { systemLanguage.language }
     }
     val languageValue = when (language) {
-        AppLanguage.SYSTEM -> stringResource(R.string.system_value, stringResource(R.string.system_short), systemName)
+        AppLanguage.SYSTEM -> stringResource(R.string.system_language_value, systemName)
         AppLanguage.RUSSIAN -> stringResource(R.string.language_ru)
         AppLanguage.ENGLISH -> stringResource(R.string.language_en)
     }
@@ -352,29 +351,15 @@ private fun PersonalizationCard(
 @Composable
 private fun PreferenceRow(label: Int, value: String, icon: Int, action: () -> Unit) {
     val colors = MaterialTheme.colorScheme
-    val fontScale = LocalDensity.current.fontScale
-    BoxWithConstraints(Modifier.fillMaxWidth().clickable(onClick = action)
-        .heightIn(min = 64.dp).padding(horizontal = 16.dp, vertical = 12.dp)) {
-        val compact = maxWidth < 250.dp || fontScale > 1.3f
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Icon(painterResource(icon), null, tint = colors.primary, modifier = Modifier.size(24.dp))
-            if (compact) {
-                // Both manual and system modes use the same two text slots at large font sizes.
-                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    Text(stringResource(label), style = MaterialTheme.typography.titleMedium)
-                    Text(value, style = MaterialTheme.typography.bodyMedium, color = colors.onSurfaceVariant,
-                        minLines = 2, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                }
-            } else {
-                Text(stringResource(label), Modifier.weight(0.47f), style = MaterialTheme.typography.titleMedium,
-                    maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text(value, Modifier.weight(0.53f), textAlign = TextAlign.End,
-                    style = MaterialTheme.typography.bodyMedium, color = colors.onSurfaceVariant,
-                    maxLines = 1, overflow = TextOverflow.Ellipsis)
-            }
-            Icon(painterResource(R.drawable.ic_chevron), null, tint = colors.onSurfaceVariant, modifier = Modifier.size(20.dp))
+    Row(Modifier.fillMaxWidth().clickable(onClick = action)
+        .heightIn(min = 64.dp).padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        Icon(painterResource(icon), null, tint = colors.primary, modifier = Modifier.size(24.dp))
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+            Text(stringResource(label), style = MaterialTheme.typography.titleMedium)
+            Text(value, style = MaterialTheme.typography.bodyMedium, color = colors.onSurfaceVariant)
         }
+        Icon(painterResource(R.drawable.ic_chevron), null, tint = colors.onSurfaceVariant, modifier = Modifier.size(20.dp))
     }
 }
 
