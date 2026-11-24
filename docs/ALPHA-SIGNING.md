@@ -29,3 +29,5 @@ References: https://developer.android.com/studio/publish/app-signing ; https://d
 
 ## Verified baseline and continuity check
 Build 4 CI run #9 attempt 2 successfully signed and verified the APK using v2/v3. Public signer certificate SHA-256: `d26244a7cdf0207f6bf0f5c54ad557c89b2e1ae4357bb07ae070085de66c22c8`. Maintainer confirms signed Build 4 runs. Build 5 CI compares the verified signer digest to this baseline and rejects mismatches before signed artifact upload. This is the certificate fingerprint, not the APK or ZIP hash, and contains no private key. Update test on a real device remains required. Keep Build 4 installed; select non-default appearance and language, install signed Build 5 over it, confirm Build 5 and both settings remain. If install fails, report error and do not uninstall as a workaround.
+
+Build 5 CI #11 (45320460175) confirmed matching certificate and signed artifact; maintainer verified updating Build 4 to Build 5 without uninstall or loss of preferences. Signing continuity accepted for this pair. Keep the certificate guard for subsequent builds.

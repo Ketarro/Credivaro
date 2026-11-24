@@ -45,7 +45,7 @@ jobs:
       - name: Upload temporary debug APK (clean installs only)
         uses: actions/upload-artifact@v4
         with:
-          name: credivaro-v0.1.0-alpha-build5-temporary-debug
+          name: credivaro-v0.1.0-alpha-build6-temporary-debug
           path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 14
@@ -76,7 +76,7 @@ jobs:
           unset ALPHA_KEYSTORE_B64
           apksigner="${ANDROID_HOME}/build-tools/35.0.0/apksigner"
           mkdir -p "$RUNNER_TEMP/credivaro-alpha"
-          output="$RUNNER_TEMP/credivaro-alpha/credivaro-v0.1.0-alpha-build5.apk"
+          output="$RUNNER_TEMP/credivaro-alpha/credivaro-v0.1.0-alpha-build6.apk"
           "$apksigner" sign --ks "$key_dir/alpha.p12" --ks-type PKCS12 \
             --ks-key-alias credivaro-alpha --ks-pass env:ALPHA_KEYSTORE_PASSWORD \
             --key-pass env:ALPHA_KEYSTORE_PASSWORD --out "$output" \
@@ -95,7 +95,7 @@ jobs:
         if: steps.alpha_sign.outputs.signed == 'true'
         uses: actions/upload-artifact@v4
         with:
-          name: credivaro-v0.1.0-alpha-build5-signed
-          path: ${{ runner.temp }}/credivaro-alpha/credivaro-v0.1.0-alpha-build5.apk
+          name: credivaro-v0.1.0-alpha-build6-signed
+          path: ${{ runner.temp }}/credivaro-alpha/credivaro-v0.1.0-alpha-build6.apk
           if-no-files-found: error
           retention-days: 14

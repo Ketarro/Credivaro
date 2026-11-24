@@ -2,6 +2,9 @@ package io.github.ketarro.credivaro
 
 import android.os.Bundle
 import android.content.res.Configuration
+import android.content.res.Resources
+import androidx.compose.foundation.clickable
+import io.github.ketarro.credivaro.model.Obligation
 import android.util.Log
 import android.graphics.drawable.ColorDrawable
 import androidx.compose.foundation.background
@@ -51,18 +54,26 @@ class MainActivity : AppCompatActivity() {
         if (BuildConfig.DEBUG) Log.d("CredivaroLocale", "activity created")
         setContent {
             var appearance by remember { mutableStateOf(initialAppearance) }
+            val systemDark = isSystemInDarkTheme()
             val dark = when (appearance) {
                 Appearance.LIGHT -> false
                 Appearance.DARK -> true
-                Appearance.SYSTEM -> isSystemInDarkTheme()
+                Appearance.SYSTEM -> systemDark
             }
             val configuration = LocalConfiguration.current
             var language by remember { mutableStateOf(currentAppLanguage()) }
             LaunchedEffect(configuration) { language = currentAppLanguage() }
             LaunchedEffect(dark) { applyWindowAppearance(dark) }
+            val systemLanguage = remember(configuration) {
+                Resources.getSystem().configuration.locales[0]
+            }
+            val records = remember { mutableStateListOf<Obligation>() }
             CredivaroTheme(dark) {
                 AlphaScreen(
                     dark = dark,
+                    systemDark = systemDark,
+                    systemLanguage = systemLanguage,
+                    records = records,
                     appearance = appearance,
                     onAppearance = { value ->
                         preferences.edit().putString("mode", value.stored).apply()
@@ -102,20 +113,29 @@ private fun currentAppLanguage(): AppLanguage =
 @Composable
 private fun AlphaScreen(
     dark: Boolean,
+    systemDark: Boolean,
+    systemLanguage: java.util.Locale,
+    records: MutableList<Obligation>,
     appearance: Appearance, onAppearance: (Appearance) -> Unit,
     language: AppLanguage, onLanguage: (AppLanguage) -> Unit
 ) {
     var settings by rememberSaveable { mutableStateOf(false) }
     var about by rememberSaveable { mutableStateOf(false) }
-    BackHandler(settings || about) { if (about) about = false else settings = false }
+    var obligations by rememberSaveable { mutableStateOf(false) }
+    var dialog by rememberSaveable { mutableStateOf("") }
+    BackHandler(settings || about || obligations) {
+        if (about) about = false else { settings = false; obligations = false }
+    }
     val colors = MaterialTheme.colorScheme
     Scaffold(
         containerColor = colors.background,
         bottomBar = {
             CredivaroBottomBar(
                 settingsSelected = settings,
-                onHome = { settings = false; about = false },
-                onSettings = { settings = true; about = false }
+                obligationsSelected = obligations,
+                onHome = { settings = false; about = false; obligations = false },
+                onObligations = { obligations = true; settings = false; about = false },
+                onSettings = { settings = true; about = false; obligations = false }
             )
         }
     ) { padding ->
@@ -143,22 +163,17 @@ private fun AlphaScreen(
                 } else if (settings) {
                     Text(stringResource(R.string.settings), style = MaterialTheme.typography.headlineSmall)
                     SectionTitle(R.string.personalization)
-                    SettingsCard {
-                        Text(stringResource(R.string.theme_label), style = MaterialTheme.typography.titleMedium)
-                        Column(Modifier.selectableGroup()) {
-                            val labels = listOf(R.string.theme_system, R.string.theme_light, R.string.theme_dark)
-                            Appearance.entries.forEachIndexed { index, mode ->
-                                ChoiceRow(stringResource(labels[index]), appearance == mode) { onAppearance(mode) }
-                            }
-                        }
-                        HorizontalDivider(color = colors.outlineVariant)
-                        Text(stringResource(R.string.language_label), style = MaterialTheme.typography.titleMedium)
-                        Column(Modifier.selectableGroup()) {
-                            val labels = listOf(R.string.language_system, R.string.language_ru, R.string.language_en)
-                            AppLanguage.entries.forEachIndexed { index, value ->
-                                ChoiceRow(stringResource(labels[index]), language == value) { if (language != value) onLanguage(value) }
-                            }
-                        }
+                    PersonalizationCard(appearance, systemDark, language, systemLanguage,
+                        onTheme = { dialog = "theme" }, onLanguage = { dialog = "language" })
+                    if (dialog == "theme") {
+                        val labels = listOf(R.string.theme_system, R.string.theme_light, R.string.theme_dark)
+                        PreferenceDialog(R.string.theme_label, labels.map { stringResource(it) }, appearance.ordinal,
+                            onDismiss = { dialog = "" }, onSelect = { dialog = ""; onAppearance(Appearance.entries[it]) })
+                    }
+                    if (dialog == "language") {
+                        val labels = listOf(R.string.language_system, R.string.language_ru, R.string.language_en)
+                        PreferenceDialog(R.string.language_label, labels.map { stringResource(it) }, language.ordinal,
+                            onDismiss = { dialog = "" }, onSelect = { dialog = ""; onLanguage(AppLanguage.entries[it]) })
                     }
                     SectionTitle(R.string.information)
                     Card(onClick = { about = true }, shape = RoundedCornerShape(16.dp),
@@ -173,28 +188,12 @@ private fun AlphaScreen(
                             Icon(painterResource(R.drawable.ic_chevron), null, tint = colors.onSurfaceVariant)
                         }
                     }
+                } else if (obligations) {
+                    ObligationPreview(records)
                 } else {
                     BrandHeader(dark)
                     Text(stringResource(R.string.tagline), color = colors.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
-                    Card(shape = RoundedCornerShape(20.dp),
-                        colors = CardDefaults.cardColors(containerColor = colors.primaryContainer, contentColor = colors.onPrimaryContainer)) {
-                        Column(Modifier.fillMaxWidth().padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                            Surface(shape = RoundedCornerShape(12.dp), color = colors.surface) {
-                                Icon(painterResource(R.drawable.ic_wallet), null, tint = colors.primary, modifier = Modifier.padding(12.dp).size(28.dp))
-                            }
-                            Text(stringResource(R.string.welcome_title), style = MaterialTheme.typography.headlineSmall)
-                            Text(stringResource(R.string.welcome_description), style = MaterialTheme.typography.bodyMedium)
-                        }
-                    }
-                    SettingsCard {
-                        Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Icon(painterResource(R.drawable.ic_shield), null, tint = colors.primary)
-                            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                Text(stringResource(R.string.privacy_title), style = MaterialTheme.typography.titleMedium)
-                                Text(stringResource(R.string.privacy_short), color = colors.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
-                            }
-                        }
-                    }
+                    PreviewDashboard(records) { obligations = true; settings = false; about = false }
                     AlphaNotice()
                 }
             }
@@ -205,6 +204,8 @@ private fun AlphaScreen(
 @Composable
 private fun CredivaroBottomBar(
     settingsSelected: Boolean,
+    obligationsSelected: Boolean,
+    onObligations: () -> Unit,
     onHome: () -> Unit,
     onSettings: () -> Unit
 ) {
@@ -218,10 +219,17 @@ private fun CredivaroBottomBar(
             ) {
                 CompactDestination(
                     modifier = Modifier.weight(1f),
-                    selected = !settingsSelected,
+                    selected = !settingsSelected && !obligationsSelected,
                     icon = R.drawable.ic_home,
                     label = stringResource(R.string.home),
                     onClick = onHome
+                )
+                CompactDestination(
+                    modifier = Modifier.weight(1f),
+                    selected = obligationsSelected,
+                    icon = R.drawable.ic_wallet,
+                    label = stringResource(R.string.obligations_nav),
+                    onClick = onObligations
                 )
                 CompactDestination(
                     modifier = Modifier.weight(1f),
@@ -306,6 +314,59 @@ private fun ChoiceRow(label: String, selected: Boolean, action: () -> Unit) {
         RadioButton(selected = selected, onClick = null)
         Text(label, style = MaterialTheme.typography.bodyLarge)
     }
+}
+
+@Composable
+private fun PersonalizationCard(
+    appearance: Appearance, systemDark: Boolean, language: AppLanguage,
+    systemLanguage: java.util.Locale, onTheme: () -> Unit, onLanguage: () -> Unit
+) {
+    val theme = when (appearance) {
+        Appearance.SYSTEM -> stringResource(R.string.system_value, stringResource(R.string.theme_system),
+            stringResource(if (systemDark) R.string.theme_dark else R.string.theme_light))
+        Appearance.LIGHT -> stringResource(R.string.theme_light)
+        Appearance.DARK -> stringResource(R.string.theme_dark)
+    }
+    val systemName = when (systemLanguage.language) {
+        "ru" -> stringResource(R.string.language_ru)
+        "en" -> stringResource(R.string.language_en)
+        else -> systemLanguage.getDisplayLanguage(systemLanguage).ifBlank { systemLanguage.language }
+    }
+    val languageValue = when (language) {
+        AppLanguage.SYSTEM -> stringResource(R.string.system_value, stringResource(R.string.language_system), systemName)
+        AppLanguage.RUSSIAN -> stringResource(R.string.language_ru)
+        AppLanguage.ENGLISH -> stringResource(R.string.language_en)
+    }
+    Card(shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
+        Column {
+            PreferenceRow(R.string.theme_label, theme, R.drawable.ic_theme, onTheme)
+            HorizontalDivider(Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant)
+            PreferenceRow(R.string.language_label, languageValue, R.drawable.ic_language, onLanguage)
+        }
+    }
+}
+
+@Composable
+private fun PreferenceRow(label: Int, value: String, icon: Int, action: () -> Unit) {
+    val colors = MaterialTheme.colorScheme
+    Row(Modifier.fillMaxWidth().clickable(onClick = action).heightIn(min = 64.dp)
+        .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        Icon(painterResource(icon), null, tint = colors.primary)
+        Text(stringResource(label), Modifier.weight(1f), style = MaterialTheme.typography.titleMedium)
+        Text(value, Modifier.weight(1f), textAlign = TextAlign.End, style = MaterialTheme.typography.bodyMedium,
+            color = colors.onSurfaceVariant)
+        Icon(painterResource(R.drawable.ic_chevron), null, tint = colors.onSurfaceVariant)
+    }
+}
+
+@Composable
+private fun PreferenceDialog(title: Int, labels: List<String>, selected: Int, onDismiss: () -> Unit, onSelect: (Int) -> Unit) {
+    AlertDialog(onDismissRequest = onDismiss, title = { Text(stringResource(title)) }, text = {
+        Column(Modifier.selectableGroup()) {
+            labels.forEachIndexed { index, label -> ChoiceRow(label, selected == index) { onSelect(index) } }
+        }
+    }, confirmButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } })
 }
 
 @Composable
