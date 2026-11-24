@@ -38,6 +38,10 @@ jobs:
         run: gradle --no-daemon :core:model:test :app:lintDebug :app:testDebugUnitTest :app:assembleDebug :core:database:lintDebug :core:database:assembleDebugAndroidTest :app:assembleDebugAndroidTest
       - name: Print generated Room schema for review
         run: find core/database/schemas -type f -name '*.json' -print -exec cat {} +
+      - name: Verify checked-in Room schemas are unchanged
+        run: |
+          git diff --exit-code -- core/database/schemas/
+          test -z "$(git ls-files --others --exclude-standard -- core/database/schemas/)"
       - name: Upload test and lint reports
         if: always()
         uses: actions/upload-artifact@v4

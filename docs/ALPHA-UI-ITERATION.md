@@ -38,3 +38,5 @@ Owner clarified Xiaomi 17 wrong-file incident; Samsung testing postponed. Added 
 
 ## Build 9 — stage 2 (integration)
 Stage 1 CI #29/#30 passed, eight instrumented checks across API 26/36. App now connects to encrypted repository and Flow, shows loading/failure without empty fallback, saves/deletes only after transaction success. VersionCode 9, same versionName/signer, original Build 8 update smoke with sandbox marker on compatible emulators when baseline available. New UI test and key-loss test, SQLCipher license in About, APK checksum sidecar. CI pending; test records only. Samsung issue #6 remains open. See STORAGE-BUILD9.md.
+
+Build 9 stage 2 verification: CI #31/#32 passed; 12/12 instrumented tests, 5/5 clean installs and signed upgrades retaining sandbox marker. Room schema v1 committed and guarded in CI. Signed artifact available, manual tests pending. See docs/testing/BUILD-9.ru.md.
