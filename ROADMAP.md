@@ -14,6 +14,8 @@ Build 12 / этап хранения (R03.06/R04.01): подготовлены P
 
 CI #45479966371 (SHA 0097fc30): Gradle compilation/lint/JVM tests PASS, instrumented storage jobs API26/API36 PASS. Общий debug job FAIL на schema guard: новая 2.json не отслеживалась Git. Экспорт Room v2 извлечён из журнала компилятора; старый экспорт v1 совпал побайтно, три старые таблицы совпадают структурно, добавлена payment. Guard не изменён. Повторный CI требуется; APK не распространялся, versionCode 11, 17/68.
 
+Актуальная проверка кандидата Build 12: [Android CI #52](https://github.com/Ketarro/Credivaro/actions/runs/45482462046), SHA d25024cdc9e319d9ddea37dc8c1e54c5de2d0b01 — SUCCESS. Gradle check/build (JVM tests, lint, APK и androidTest compilation), штатная проверка ROADMAP и Room schema guard PASS. Инструментальные тесты API26 и API36: по 7 storage + 3 app, всего 20/20 выполнений PASS. Временный debug-APK создан, versionCode остаётся 11; постоянная подпись и compatibility/upgrade matrix SKIPPED по правилам PR. Не устанавливать на рабочие данные и не считать подписанным Build 12. Независимый review, полный migration failure/recovery, UI платежей, подписанный upgrade и физическая приёмка остаются открытыми; R03.05/R03.06/R04.01 не закрыты, 17/68 (25.0%).
+
 ## Прогресс
 Обязательные пункты: **17/68 (25.0%)**.
 Завершённые этапы: **0/10**.
