@@ -1,0 +1,5 @@
+# Build 12 — платежное ядро (подготовка)
+
+Build 12 — подготовительный этап R04.01 в отдельной ветке `feat/build12-payment-core`: по поручению владельца ручная проверка Build 11 отложена, R03.05 не закрыт. Добавлены доменные типы платежа и распределения, 11 сценариев локального JVM smoke (PASS); JUnit/Android CI не запускались. Room v1, UI, versionCode, подпись и CI без изменений. APK Build 12 ещё не создан. Платёжная персистентность и миграция требуют отдельного безопасного допуска и тестов; никаких действий с реальными данными. 17/68 (25.0%).
+
+Локальный kotlinc 1.9.0, JVM target 17: компиляция Payment.kt с Money.kt и отдельным smoke runner exit 0; 11/11 PASS: unknown allocation, exact split, zero, negative, negative allocation, mixed currency, amount mismatch, overflow, matching obligation, foreign currency, wrong obligation. JUnit-тесты добавлены, но сам JUnit runner не запускался. Android SDK/Gradle недоступны в локальной среде. Не считать R04.01 завершённым: отсутствуют DAO, журнал, миграция, UI, idempotency enforcement и связь с событиями.
