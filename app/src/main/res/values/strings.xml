@@ -39,7 +39,7 @@
     <string name="add_obligation">Add obligation</string>
     <string name="edit_obligation">Edit obligation</string>
     <string name="delete_obligation">Delete obligation</string>
-    <string name="delete_confirm">Permanently delete this test record and its stored history?</string>
+    <string name="delete_confirm">Permanently delete this test record, all its history and actual payments?</string>
     <string name="delete">Delete</string>
     <string name="save">Save</string>
     <string name="loan_type">Loan</string>
@@ -123,4 +123,19 @@
     <string name="self_db04">Reject invalid record</string>
     <string name="self_db05">Encryption and wrong key</string>
     <string name="self_db06">Damaged test key envelope</string>
+    <string name="payment_history">Actual payment history</string>
+    <string name="payment_fact_hint">Recording a payment does not transfer money or change the bank-confirmed balance.</string>
+    <string name="payment_add">Record payment</string>
+    <string name="payment_read_error">Could not read payment history. Try again.</string>
+    <string name="payment_empty">No payments recorded.</string>
+    <string name="payment_principal">Principal</string>
+    <string name="payment_interest">Interest</string>
+    <string name="payment_fees">Fees</string>
+    <string name="payment_unallocated">Unallocated</string>
+    <string name="payment_date">Actual payment date</string>
+    <string name="payment_date_hint">Use YYYY-MM-DD in the bank time zone.</string>
+    <string name="payment_amount">Actual payment amount</string>
+    <string name="payment_allocation_hint">Optional allocation: enter known parts only. The rest stays unallocated.</string>
+    <string name="payment_invalid">Check date, positive amount, currency precision and allocation total.</string>
+    <string name="payment_retry_hint">Save failed. Retry the same payment or close and check history before entering it again.</string>
 </resources>

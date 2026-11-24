@@ -36,6 +36,7 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import io.github.ketarro.credivaro.R
+import io.github.ketarro.credivaro.database.PaymentRepository
 import io.github.ketarro.credivaro.model.*
 import java.math.BigDecimal
 import java.text.NumberFormat
@@ -156,7 +157,8 @@ private fun ObligationListCard(item: Obligation, open: () -> Unit) {
 fun ObligationPreview(
     records: List<Obligation>,
     saveRecord: suspend (Obligation) -> Unit,
-    deleteRecord: suspend (UUID) -> Unit
+    deleteRecord: suspend (UUID) -> Unit,
+    payments: PaymentRepository
 ) {
     var editor by remember { mutableStateOf(false) }
     var editing by remember { mutableStateOf<Obligation?>(null) }
@@ -233,6 +235,7 @@ fun ObligationPreview(
                 }
             }
         }
+        key(detail.id) { PaymentJournal(detail, payments, enabled = !busy) }
         if (writeFailed) Text(stringResource(R.string.storage_write_error), color = MaterialTheme.colorScheme.error)
         Button(onClick = { editing = detail; editor = true; writeFailed = false }, enabled = !busy, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.edit_obligation)) }
         TextButton(onClick = { deleting = true; writeFailed = false }, enabled = !busy) { Text(stringResource(R.string.delete_obligation), color = MaterialTheme.colorScheme.error) }

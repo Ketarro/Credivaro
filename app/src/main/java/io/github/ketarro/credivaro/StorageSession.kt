@@ -4,6 +4,7 @@ import android.content.Context
 import android.os.SystemClock
 import io.github.ketarro.credivaro.database.EncryptedStorage
 import io.github.ketarro.credivaro.database.ObligationRepository
+import io.github.ketarro.credivaro.database.PaymentRepository
 import io.github.ketarro.credivaro.model.Obligation
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -28,13 +29,14 @@ internal object StorageSession {
             val started = SystemClock.elapsedRealtime()
             StartupDiagnostics.mark("storage.start")
             try {
-                val repository = (storage ?: EncryptedStorage.open(app, onStage = { stage, ms ->
+                val opened = (storage ?: EncryptedStorage.open(app, onStage = { stage, ms ->
                     StartupDiagnostics.mark(stage, ms)
-                }).also { storage = it }).repository
+                }).also { storage = it })
+                val repository = opened.repository
                 val queryStart = SystemClock.elapsedRealtime()
                 var first = true
                 repository.observeAll().collect {
-                    mutable.value = StorageState.Ready(repository, it)
+                    mutable.value = StorageState.Ready(repository, it, opened.payments)
                     if (first) {
                         first = false
                         StartupDiagnostics.mark("storage.firstQuery", SystemClock.elapsedRealtime() - queryStart)
@@ -57,5 +59,5 @@ internal object StorageSession {
 internal sealed interface StorageState {
     data object Loading : StorageState
     data object Failed : StorageState
-    data class Ready(val repository: ObligationRepository, val records: List<Obligation>) : StorageState
+    data class Ready(val repository: ObligationRepository, val records: List<Obligation>, val payments: PaymentRepository) : StorageState
 }

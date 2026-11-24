@@ -279,7 +279,8 @@ private fun AlphaScreen(
                             if (obligations) {
                                 ObligationPreview(storageState.records,
                                     saveRecord = { storageState.repository.save(it) },
-                                    deleteRecord = { check(storageState.repository.delete(it)) })
+                                    deleteRecord = { check(storageState.repository.delete(it)) },
+                                    payments = storageState.payments)
                             } else {
                                 PreviewDashboard(storageState.records) { obligations = true; settings = false; about = false }
                             }

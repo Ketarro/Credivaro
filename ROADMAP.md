@@ -16,6 +16,8 @@ CI #45479966371 (SHA 0097fc30): Gradle compilation/lint/JVM tests PASS, instrume
 
 Актуальная проверка кандидата Build 12: [Android CI #52](https://github.com/Ketarro/Credivaro/actions/runs/45482462046), SHA d25024cdc9e319d9ddea37dc8c1e54c5de2d0b01 — SUCCESS. Gradle check/build (JVM tests, lint, APK и androidTest compilation), штатная проверка ROADMAP и Room schema guard PASS. Инструментальные тесты API26 и API36: по 7 storage + 3 app, всего 20/20 выполнений PASS. Временный debug-APK создан, versionCode остаётся 11; постоянная подпись и compatibility/upgrade matrix SKIPPED по правилам PR. Не устанавливать на рабочие данные и не считать подписанным Build 12. Независимый review, полный migration failure/recovery, UI платежей, подписанный upgrade и физическая приёмка остаются открытыми; R03.05/R03.06/R04.01 не закрыты, 17/68 (25.0%).
 
+Build 12 UI candidate (R04.02/R04.03): журнал фактических платежей в карточке обязательства, форма даты/суммы/частей/примечания RU/EN; остаток явно unallocated, банковский снимок не меняется. Повтор после ошибки использует тот же operationId; hard-delete предупреждает об удалении платежей. Добавлены 10 JVM unit tests; CI ещё не получен. Корректировки, события, расчётный остаток, recovery, UI instrumentation и review впереди; версия 11, подписанного Build 12 нет. Ручная приёмка отложена. 17/68.
+
 ## Прогресс
 Обязательные пункты: **17/68 (25.0%)**.
 Завершённые этапы: **0/10**.

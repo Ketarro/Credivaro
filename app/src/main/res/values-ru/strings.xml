@@ -39,7 +39,7 @@
     <string name="add_obligation">Добавить обязательство</string>
     <string name="edit_obligation">Редактировать</string>
     <string name="delete_obligation">Удалить обязательство</string>
-    <string name="delete_confirm">Безвозвратно удалить эту тестовую запись и её историю?</string>
+    <string name="delete_confirm">Безвозвратно удалить эту тестовую запись, всю её историю и фактические платежи?</string>
     <string name="delete">Удалить</string>
     <string name="save">Сохранить</string>
     <string name="loan_type">Кредит</string>
@@ -123,4 +123,19 @@
     <string name="self_db04">Отклонение неверной записи</string>
     <string name="self_db05">Шифрование и неверный ключ</string>
     <string name="self_db06">Повреждение тестового контейнера ключа</string>
+    <string name="payment_history">История фактических платежей</string>
+    <string name="payment_fact_hint">Запись платежа не переводит деньги и не изменяет подтверждённый банком остаток.</string>
+    <string name="payment_add">Записать платёж</string>
+    <string name="payment_read_error">Не удалось прочитать историю платежей. Повторите попытку.</string>
+    <string name="payment_empty">Пока нет записанных платежей.</string>
+    <string name="payment_principal">Основной долг</string>
+    <string name="payment_interest">Проценты</string>
+    <string name="payment_fees">Комиссии</string>
+    <string name="payment_unallocated">Не распределено</string>
+    <string name="payment_date">Дата фактического платежа</string>
+    <string name="payment_date_hint">ГГГГ-ММ-ДД в часовом поясе банка.</string>
+    <string name="payment_amount">Сумма фактического платежа</string>
+    <string name="payment_allocation_hint">Распределение необязательно: укажите только известные части. Остаток останется нераспределённым.</string>
+    <string name="payment_invalid">Проверьте дату, положительную сумму, точность валюты и распределение.</string>
+    <string name="payment_retry_hint">Не удалось сохранить. Повторите ту же операцию или закройте окно и проверьте историю перед повторным вводом.</string>
 </resources>
