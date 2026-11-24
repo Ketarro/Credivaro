@@ -152,6 +152,7 @@ private fun AlphaScreen(
     var dialog by rememberSaveable { mutableStateOf("") }
     var showLicenses by rememberSaveable { mutableStateOf(false) }
     var showDiagnostics by rememberSaveable { mutableStateOf(false) }
+    var showSelfCheck by rememberSaveable { mutableStateOf(false) }
     var pendingLanguage by remember { mutableStateOf<AppLanguage?>(null) }
     LaunchedEffect(pendingLanguage) {
         val selected = pendingLanguage ?: return@LaunchedEffect
@@ -200,9 +201,11 @@ private fun AlphaScreen(
                         TextButton(onClick = { showLicenses = true }) { Text(stringResource(R.string.third_party_licenses)) }
                         if (BuildConfig.DEBUG) {
                             TextButton(onClick = { showDiagnostics = true }) { Text(stringResource(R.string.startup_diagnostics)) }
+                            TextButton(onClick = { showSelfCheck = true }) { Text(stringResource(R.string.self_check_title)) }
                         }
                     }
                     AlphaNotice()
+                    if (showSelfCheck && BuildConfig.DEBUG) SelfCheckDialog { showSelfCheck = false }
                     if (showDiagnostics && BuildConfig.DEBUG) {
                         val events by StartupDiagnostics.events.collectAsState()
                         AlertDialog(onDismissRequest = { showDiagnostics = false },

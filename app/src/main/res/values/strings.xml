@@ -101,4 +101,26 @@
     <string name="startup_diagnostics">Startup diagnostics</string>
     <string name="startup_diagnostics_hint">Local debug timings only. Values in parentheses are stage durations. After reboot, open this screen before stopping the app. No financial data is collected.</string>
     <string name="sqlcipher_license_explanation">SQLCipher encrypts the local database. The original license is reproduced below in English. It is not a Credivaro license.</string>
+    <string name="self_check_title">Self-check</string>
+    <string name="self_check_hint">Debug test only. Uses a separate encrypted database and fictional records. No personal records are read or changed.</string>
+    <string name="self_check_count">Passed: %1$d / %2$d</string>
+    <string name="self_check_running">Running…</string>
+    <string name="self_check_aborted">Incomplete run. Run again.</string>
+    <string name="self_check_finished">Checks finished. Visual checks and device reboot still need manual testing.</string>
+    <string name="self_check_idle">Ready to start</string>
+    <string name="self_check_pending">Pending</string>
+    <string name="self_check_pass">PASS</string>
+    <string name="self_check_fail">FAIL</string>
+    <string name="self_check_start">Run checks</string>
+    <string name="self_check_copy">Copy report</string>
+    <string name="self_fin01">Amount validation</string>
+    <string name="self_fin02">Zero and unknown</string>
+    <string name="self_fin03">Date validation</string>
+    <string name="self_fin04">Separate currency totals</string>
+    <string name="self_db01">Four obligation types and reopen</string>
+    <string name="self_db02">Edit history and rollback</string>
+    <string name="self_db03">Deletion after reopen</string>
+    <string name="self_db04">Reject invalid record</string>
+    <string name="self_db05">Encryption and wrong key</string>
+    <string name="self_db06">Damaged test key envelope</string>
 </resources>

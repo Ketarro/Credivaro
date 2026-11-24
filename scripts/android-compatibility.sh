@@ -71,7 +71,7 @@ check_one() (
     exit 1
   fi
   cat "$dest/pid.txt"
-  if [[ "$expected_code" == 10 ]]; then
+  if [[ "$expected_code" -ge 10 ]]; then
     # Ensure this diagnostic build really opens encrypted storage, not just a live activity.
     ready=false
     for attempt in $(seq 1 30); do
@@ -115,7 +115,7 @@ for kind in original current; do
 done
 # Update the known persistent baseline certificate to the current signed APK.
 # No physical user data exists in this CI sandbox.
-if [[ "$status" == 0 && "$CURRENT_SIGNED" == true && "$EXPECTED_VERSION_CODE" == 10 ]]; then
+if [[ "$status" == 0 && "$CURRENT_SIGNED" == true && "$EXPECTED_VERSION_CODE" == 11 ]]; then
   mapfile -t originals < <(find compatibility/original -type f -name '*.apk' 2>/dev/null || true)
   mapfile -t currents < <(find compatibility/current -type f -name '*.apk' 2>/dev/null || true)
   if [[ "${#originals[@]}" == 1 && "${#currents[@]}" == 1 ]]; then

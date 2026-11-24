@@ -101,4 +101,26 @@
     <string name="startup_diagnostics">Диагностика запуска</string>
     <string name="startup_diagnostics_hint">Локальные замеры тестовой сборки. В скобках — длительность этапа. После перезагрузки откройте этот экран до остановки приложения. Финансовые данные не собираются.</string>
     <string name="sqlcipher_license_explanation">SQLCipher шифрует локальную базу данных. Ниже приведён оригинальный текст лицензии на английском языке. Это лицензия стороннего компонента, а не Credivaro.</string>
+    <string name="self_check_title">Автотестирование</string>
+    <string name="self_check_hint">Только для тестовой сборки. Используется отдельная зашифрованная база и вымышленные записи. Ваши обязательства не читаются и не изменяются.</string>
+    <string name="self_check_count">Пройдено: %1$d / %2$d</string>
+    <string name="self_check_running">Выполняется…</string>
+    <string name="self_check_aborted">Проверка не завершена. Запустите повторно.</string>
+    <string name="self_check_finished">Проверки завершены. Внешний вид и перезагрузка телефона проверяются вручную.</string>
+    <string name="self_check_idle">Готово к запуску</string>
+    <string name="self_check_pending">Ожидает</string>
+    <string name="self_check_pass">PASS</string>
+    <string name="self_check_fail">FAIL</string>
+    <string name="self_check_start">Запустить проверки</string>
+    <string name="self_check_copy">Копировать отчёт</string>
+    <string name="self_fin01">Валидация сумм</string>
+    <string name="self_fin02">Ноль и неизвестный остаток</string>
+    <string name="self_fin03">Валидация дат</string>
+    <string name="self_fin04">Раздельные итоги валют</string>
+    <string name="self_db01">Четыре типа и повторное открытие</string>
+    <string name="self_db02">История изменений и откат</string>
+    <string name="self_db03">Удаление после повторного открытия</string>
+    <string name="self_db04">Отклонение неверной записи</string>
+    <string name="self_db05">Шифрование и неверный ключ</string>
+    <string name="self_db06">Повреждение тестового контейнера ключа</string>
 </resources>
