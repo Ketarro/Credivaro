@@ -6,6 +6,12 @@ import java.time.Clock
 import java.time.LocalDate
 import java.util.UUID
 
+internal data class EventPaymentLinkState(
+    val paymentId: UUID,
+    val status: PaymentHistoryStatus,
+    val replacementId: UUID?
+)
+
 /** Isolated candidate. Never open or migrate the production database through this class.
  * Caller owns the database connection; all operations are synchronous and must run off main.
  */
@@ -127,6 +133,31 @@ internal class EventStorageCandidate(private val db: SupportSQLiteDatabase, priv
             require(!it.moveToFirst()) { "Corrected payment cannot be newly linked" }
         }
         db.execSQL("INSERT OR IGNORE INTO event_payment_link(occurrenceId,paymentId) VALUES (?,?)", arrayOf(e,p))
+    }
+
+    /** Audit links remain immutable after a correction. Only uncorrected explicitly linked
+     * payment facts are effective; a replacement never inherits a link implicitly.
+     * A corrected historical link still protects its occurrence from destructive edits.
+     */
+    fun paymentLinks(eventId: UUID): List<EventPaymentLinkState> = atomic {
+        db.query("SELECT 1 FROM event_occurrence WHERE id=?", arrayOf(eventId.toString())).use {
+            require(it.moveToFirst()) { "Unknown event" }
+        }
+        db.query("""SELECT l.paymentId,c.targetPaymentId,c.replacementId
+            FROM event_payment_link l LEFT JOIN payment_correction c ON c.targetPaymentId=l.paymentId
+            WHERE l.occurrenceId=? ORDER BY l.paymentId""", arrayOf(eventId.toString())).use { c ->
+            buildList {
+                while (c.moveToNext()) {
+                    val replacement = if (c.isNull(2)) null else UUID.fromString(c.getString(2))
+                    add(EventPaymentLinkState(UUID.fromString(c.getString(0)),
+                        when {
+                            c.isNull(1) -> PaymentHistoryStatus.ACTIVE
+                            replacement == null -> PaymentHistoryStatus.CANCELLED
+                            else -> PaymentHistoryStatus.REPLACED
+                        }, replacement))
+                }
+            }
+        }
     }
 
     /** Materialize active events and retire stale future slots without deleting history. */

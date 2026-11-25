@@ -23,6 +23,7 @@ class EventStorageCandidateTest {
         val payment = UUID.randomUUID()
         val wrongPayment = UUID.randomUUID()
         val corrected = UUID.randomUUID()
+        val replacement = UUID.randomUUID()
         val date = LocalDate.of(2028,2,29)
         val clock = Clock.fixed(date.atStartOfDay(ZoneOffset.UTC).toInstant(), ZoneOffset.UTC)
         val window = EventWindow(date,date.plusMonths(2))
@@ -35,11 +36,11 @@ class EventStorageCandidateTest {
             override fun onCreate(db: SupportSQLiteDatabase) {
                 db.execSQL("CREATE TABLE obligation(id TEXT NOT NULL PRIMARY KEY,currency TEXT NOT NULL,bankZone TEXT NOT NULL)")
                 db.execSQL("CREATE TABLE payment(id TEXT NOT NULL PRIMARY KEY,obligationId TEXT NOT NULL,currency TEXT NOT NULL)")
-                db.execSQL("CREATE TABLE payment_correction(targetPaymentId TEXT NOT NULL PRIMARY KEY)")
+                db.execSQL("CREATE TABLE payment_correction(targetPaymentId TEXT NOT NULL PRIMARY KEY,replacementId TEXT)")
                 for (o in listOf(owner,other)) db.execSQL("INSERT INTO obligation VALUES (?,'RUB','Z')",arrayOf(o.toString()))
-                for ((p,o) in listOf(payment to owner,wrongPayment to other,corrected to owner))
+                for ((p,o) in listOf(payment to owner,wrongPayment to other,corrected to owner,replacement to owner))
                     db.execSQL("INSERT INTO payment VALUES (?,?,'RUB')",arrayOf(p.toString(),o.toString()))
-                db.execSQL("INSERT INTO payment_correction VALUES (?)",arrayOf(corrected.toString()))
+                db.execSQL("INSERT INTO payment_correction(targetPaymentId) VALUES (?)",arrayOf(corrected.toString()))
                 EventStorageSchemaCandidate.create(db)
             }
             override fun onUpgrade(db: SupportSQLiteDatabase, oldVersion: Int, newVersion: Int) = error("Unexpected upgrade")
@@ -48,6 +49,7 @@ class EventStorageCandidateTest {
             SupportSQLiteOpenHelper.Configuration.builder(context).name(name).callback(callback).build())
         fun count(db: SupportSQLiteDatabase, table: String): Int =
             db.query("SELECT COUNT(*) FROM " + table).use { check(it.moveToFirst()); it.getInt(0) }
+        var linkedEventId: UUID? = null
         try {
             open().use { helper ->
                 val db = helper.writableDatabase
@@ -61,6 +63,7 @@ class EventStorageCandidateTest {
                 assertEquals(2,first.upsert.size)
                 assertTrue(store.reconcile(owner,window).upsert.isEmpty())
                 val id = first.upsert.first().key.id
+                linkedEventId = id
                 assertTrue(runCatching { store.linkPayment(id,wrongPayment) }.isFailure)
                 assertTrue(runCatching { store.linkPayment(id,corrected) }.isFailure)
                 val original = first.upsert.last()
@@ -81,12 +84,22 @@ class EventStorageCandidateTest {
                 assertTrue(runCatching { store.editOverride(first.upsert.first(), EventOverride.Cancel(first.upsert.first().key)) }.isFailure)
                 store.editOverride(original, EventOverride.Move(original.key,date.plusMonths(1).plusDays(1)))
                 assertEquals(1,count(db,"event_payment_link"))
+                assertEquals(listOf(EventPaymentLinkState(payment, PaymentHistoryStatus.ACTIVE, null)), store.paymentLinks(id))
+                db.execSQL("INSERT INTO payment_correction VALUES (?,?)",arrayOf(payment.toString(),replacement.toString()))
+                assertEquals(listOf(EventPaymentLinkState(payment, PaymentHistoryStatus.REPLACED, replacement)), store.paymentLinks(id))
+                assertTrue(runCatching { store.linkPayment(id,payment) }.isFailure)
+                assertTrue(runCatching { store.editOverride(first.upsert.first(), EventOverride.Cancel(first.upsert.first().key)) }.isFailure)
+                store.linkPayment(id,replacement)
+                assertEquals(setOf(payment,replacement),store.paymentLinks(id).map { it.paymentId }.toSet())
+                db.execSQL("INSERT INTO payment_correction(targetPaymentId) VALUES (?)",arrayOf(replacement.toString()))
+                assertEquals(setOf(PaymentHistoryStatus.REPLACED,PaymentHistoryStatus.CANCELLED),store.paymentLinks(id).map { it.status }.toSet())
             }
             open().use { helper ->
                 val db = helper.writableDatabase
                 assertEquals(2,count(db,"event_occurrence"))
-                assertEquals(1,count(db,"event_payment_link"))
-                assertEquals(3,count(db,"payment"))
+                assertEquals(2,count(db,"event_payment_link"))
+                assertEquals(4,count(db,"payment"))
+                assertEquals(setOf(PaymentHistoryStatus.REPLACED,PaymentHistoryStatus.CANCELLED), EventStorageCandidate(db,clock).paymentLinks(checkNotNull(linkedEventId)).map { it.status }.toSet())
                 assertEquals(1,count(db,"event_override"))
                 assertTrue(EventStorageCandidate(db,clock).reconcile(owner,window).upsert.isEmpty())
                 db.query("PRAGMA foreign_key_check").use { assertFalse(it.moveToFirst()) }
