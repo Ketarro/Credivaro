@@ -27,6 +27,9 @@ class StorageUiTest {
         rule.waitUntil(30000) { rule.onAllNodesWithTag("home-add").fetchSemanticsNodes().isNotEmpty() }
         rule.onNodeWithTag("home-add").performScrollTo().activate()
         rule.onNodeWithTag("field-${R.string.field_title}").performScrollTo().performSemanticsAction(SemanticsActions.SetText) { check(it(AnnotatedString(title))) }
+        rule.onNodeWithText(label(R.string.form_additional)).performScrollTo().activate()
+        rule.onNodeWithTag("due-date").performScrollTo().activate()
+        rule.onNodeWithTag("due-date-dismiss").activate()
         rule.onNodeWithTag("save-obligation").performScrollTo().activate()
         waitFor(title)
         waitFor(label(R.string.ux_actions))

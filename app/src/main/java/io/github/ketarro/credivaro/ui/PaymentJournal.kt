@@ -135,8 +135,9 @@ internal fun PaymentEntryDialog(obligation: Obligation, repository: PaymentRepos
                 Text(stringResource(R.string.payment_fact_hint))
                 Text(obligation.title + " · " + obligation.currency.currencyCode, style = MaterialTheme.typography.titleMedium)
                 PaymentInput(amount, { amount = it.take(32) }, R.string.payment_amount, "payment-amount", editable, true)
-                PaymentInput(date, { date = it.take(10) }, R.string.payment_date, "payment-date", editable)
-                Text(stringResource(R.string.payment_date_hint), style = MaterialTheme.typography.bodySmall)
+                val today = LocalDate.now(obligation.bankZone)
+                CalendarField(date, { date = it }, R.string.payment_date, "payment-date", today,
+                    min = obligation.openedOn, max = today, enabled = editable, shortcuts = true)
                 OutlinedButton(onClick = { advanced = !advanced }, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).testTag("payment-advanced")) {
                     Text(stringResource(if (advanced) R.string.form_hide_additional else R.string.ux_optional_details))
                 }
@@ -146,6 +147,11 @@ internal fun PaymentEntryDialog(obligation: Obligation, repository: PaymentRepos
                 PaymentInput(interest, { interest = it.take(32) }, R.string.payment_interest, "payment-interest", editable, true)
                 PaymentInput(fees, { fees = it.take(32) }, R.string.payment_fees, "payment-fees", editable, true)
                 PaymentInput(notes, { notes = it.take(500) }, R.string.field_notes, "payment-notes", editable)
+                val remainder = runCatching {
+                    buildPayment(obligation, UUID.randomUUID(), UUID.randomUUID(), date, amount, principal, interest, fees, notes, today).allocation.unallocated
+                }.getOrNull()
+                if (remainder != null) Text(stringResource(R.string.payment_unallocated) + ": " + paymentMoney(remainder),
+                    style = MaterialTheme.typography.titleSmall, modifier = Modifier.testTag("payment-remainder"))
                 }
                 if (target != null) PaymentInput(reason, { reason = it.take(500) }, R.string.ux_reason, "correction-reason", editable)
                 if (invalid) Text(stringResource(if (target != null && reason.isBlank()) R.string.ux_reason else R.string.payment_invalid), color = MaterialTheme.colorScheme.error,

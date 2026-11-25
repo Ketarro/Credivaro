@@ -379,6 +379,7 @@ private fun PreviewEditor(existing: Obligation?, busy: Boolean, writeFailed: Boo
     var due by rememberSaveable { mutableStateOf(existing?.paymentDate()?.toString().orEmpty()) }
     var cashLimit by rememberSaveable { mutableStateOf((oldTerms as? ObligationTerms.CreditCard)?.cashFeeFreeLimit?.raw().orEmpty()) }
     var expanded by rememberSaveable { mutableStateOf(existing != null) }
+    var pendingCurrency by rememberSaveable { mutableStateOf<String?>(null) }
     var dirty by rememberSaveable { mutableStateOf(false) }
     var discard by rememberSaveable { mutableStateOf(false) }
     fun requestCancel() { if (!busy) { if (dirty) discard = true else onCancel() } }
@@ -417,19 +418,29 @@ private fun PreviewEditor(existing: Obligation?, busy: Boolean, writeFailed: Boo
         Text(stringResource(R.string.field_currency), style = MaterialTheme.typography.labelLarge)
         Box {
             OutlinedButton(onClick = { currencyMenu = true }, enabled = existing == null, modifier = Modifier.fillMaxWidth()) {
-                Text(currency, Modifier.weight(1f))
+                Text(currency + " · " + Currency.getInstance(currency).getDisplayName(LocalConfiguration.current.locales[0]), Modifier.weight(1f))
                 Icon(painterResource(R.drawable.ic_chevron), null, modifier = Modifier.size(18.dp))
             }
             DropdownMenu(expanded = currencyMenu, onDismissRequest = { currencyMenu = false }) {
                 currencies.forEach { code ->
-                    DropdownMenuItem(text = { Text(code) }, onClick = {
-                        if (currency != code) { dirty = true; currency = code; balance = ""; payment = ""; limit = ""; cashLimit = "" }
+                    DropdownMenuItem(text = { Text(code + " · " + Currency.getInstance(code).getDisplayName(LocalConfiguration.current.locales[0])) }, onClick = {
+                        if (currency != code) {
+                            if (listOf(balance, payment, limit, cashLimit).any { it.isNotBlank() }) pendingCurrency = code
+                            else { dirty = true; currency = code }
+                        }
                         currencyMenu = false
                     })
                 }
             }
         }
     }
+    pendingCurrency?.let { code -> AlertDialog(onDismissRequest = { pendingCurrency = null },
+        title = { Text(stringResource(R.string.ux_change_currency)) },
+        text = { Text(stringResource(R.string.ux_currency_reset_hint)) },
+        confirmButton = { TextButton(onClick = {
+            dirty = true; currency = code; balance = ""; payment = ""; limit = ""; cashLimit = ""; pendingCurrency = null
+        }) { Text(stringResource(R.string.ux_change_currency)) } },
+        dismissButton = { TextButton(onClick = { pendingCurrency = null }) { Text(stringResource(R.string.cancel)) } }) }
     FormSection(R.string.form_finances) {
         AmountField(balance, { dirty = true; balance = it }, R.string.form_balance)
         Text(stringResource(R.string.field_amount_hint), style = MaterialTheme.typography.bodySmall)
@@ -446,8 +457,8 @@ private fun PreviewEditor(existing: Obligation?, busy: Boolean, writeFailed: Boo
         if (type == ObligationType.CREDIT_CARD) AmountField(limit, { dirty = true; limit = it }, R.string.form_limit)
         Text(stringResource(R.string.field_amount_hint), style = MaterialTheme.typography.bodySmall)
             if (type != ObligationType.OTHER) {
-                StaticField(due, { dirty = true; due = it.take(10) }, R.string.field_due_date)
-                Text(stringResource(R.string.field_date_hint), style = MaterialTheme.typography.bodySmall)
+                CalendarField(due, { dirty = true; due = it }, R.string.field_due_date, "due-date",
+                    today = LocalDate.now(existing?.bankZone ?: ZoneId.systemDefault()), optional = true, enabled = !busy)
             }
             if (type == ObligationType.CREDIT_CARD) AmountField(cashLimit, { dirty = true; cashLimit = it }, R.string.field_cash_limit)
             StaticField(notes, { dirty = true; notes = it.take(500) }, R.string.field_notes)

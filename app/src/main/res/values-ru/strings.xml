@@ -178,4 +178,12 @@
     <string name="ux_correct">Исправить платёж</string>
     <string name="ux_cancel_payment">Отменить запись платежа</string>
     <string name="ux_cancel_hint">Исходная запись останется в истории. Это не отмена банковского перевода и не изменение остатка банка.</string>
+    <string name="ux_choose_date">Выбрать дату</string>
+    <string name="ux_calendar">Календарь</string>
+    <string name="ux_clear_date">Убрать дату</string>
+    <string name="ux_select_date">Выбрать</string>
+    <string name="ux_today">Сегодня</string>
+    <string name="ux_yesterday">Вчера</string>
+    <string name="ux_change_currency">Сменить валюту</string>
+    <string name="ux_currency_reset_hint">Введённые денежные суммы будут очищены. Пересчёта в другую валюту не будет.</string>
 </resources>

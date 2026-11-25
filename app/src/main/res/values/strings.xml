@@ -178,4 +178,12 @@
     <string name="ux_correct">Correct payment</string>
     <string name="ux_cancel_payment">Cancel payment record</string>
     <string name="ux_cancel_hint">The original stays in history. This does not reverse a bank transfer or change the bank balance.</string>
+    <string name="ux_choose_date">Choose date</string>
+    <string name="ux_calendar">Calendar</string>
+    <string name="ux_clear_date">Clear date</string>
+    <string name="ux_select_date">Select</string>
+    <string name="ux_today">Today</string>
+    <string name="ux_yesterday">Yesterday</string>
+    <string name="ux_change_currency">Change currency</string>
+    <string name="ux_currency_reset_hint">Entered money amounts will be cleared. They will not be converted to another currency.</string>
 </resources>

@@ -10,7 +10,7 @@ android {
         applicationId = "io.github.ketarro.credivaro"
         minSdk = 26
         targetSdk = 36
-        versionCode = 13
+        versionCode = 14
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         versionName = "0.1.0-alpha"
         resourceConfigurations += listOf("en", "ru")
