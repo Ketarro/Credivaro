@@ -1,0 +1,26 @@
+# Agent and contributor instructions
+
+## Scope
+Read [HANDOFF.md](HANDOFF.md) and [ROADMAP.md](ROADMAP.md) before every development or review session; verify branch HEAD, PR, current CI and evidence. Select the stable roadmap item ID before implementation. ROADMAP.md in the active development branch is the canonical alpha execution plan; legacy roadmap in PR #1 is historical. Do not start implementation beyond the agreed scope. Keep main buildable once Android implementation begins; use focused branches and PRs. Preserve user changes and existing license. Never force-push or merge without approval.
+
+## Versioning and release approval
+The first planned application version is v0.1.0-alpha. Follow docs/VERSIONING.md. Iterate pre-release versions based on maintainer feedback; no automatic promotion to beta, RC or stable, no release tags or publication without explicit approval. Documentation revisions such as v1.0 are not application versions. Do not mark an alpha as released without actual build evidence and approval.
+
+## Architecture
+Kotlin / Compose / Material 3 are the intended stack. Keep pure financial rules separate from Android UI, persistence and scheduling. Start with necessary modules only; document architecture decisions. Use repository abstractions and explicit data migrations.
+
+## Financial correctness
+Use integer minor units or exact decimal arithmetic, never binary floating point for money. Store currency and rounding policy. Keep planned, actual, estimated and bank-confirmed data distinct. Support partial and extra payments, missing terms, configurable dates, end-of-month rules and rate changes. Do not invent lender rules or guarantee grace periods. Test calculations with synthetic cases and disclose assumptions.
+
+## Privacy and security
+Local-first. No compulsory login, telemetry, network calls or bank credentials by default. No real customer data, PINs, card numbers, tokens, keystores or personal statements in source, fixtures, logs or screenshots. Use Android Keystore for supported key protection; verify encryption and backup choices. Never send financial data off device without explicit opt-in.
+
+## UI and notifications
+Use Signal Frame brand colors, accessible contrast and scalable text; do not rely on color alone. Localize strings (RU/EN). Reminders must be configurable, handle time zones/reboots/permission denial and avoid duplicates. Marking a payment in the app is not a bank transfer.
+
+## Quality gates
+Add tests for financial rules, migrations, reminder scheduling and key UI flows. Run available build/lint/test tasks; report actual results and blockers. Do not claim an APK or passed checks without verification. Update docs and changelog with relevant changes. After each substantial change or test, update ROADMAP.md, HANDOFF.md and test evidence together, recompute counts from checkboxes and run `python3 scripts/check-roadmap.py`. Never check off an unverified item; reopen it on regression. Report progress and blockers. Scope changes require maintainer agreement. All mandatory roadmap items must be complete before the first published v0.1.0-alpha; obtain final maintainer confirmation, then publish exactly that alpha, not a stable release. Record actual tag/URL/SHA/versionCode after publication.
+
+## Project records and continuation
+Before each session read ROADMAP.md, HANDOFF.md, CHANGELOG.md and current docs/checkpoints/<task-id>.md, verify actual branch HEAD, PR and CI. ROADMAP is the sole canonical task list: preserve IDs, criteria and evidence. For every started task maintain a checkpoint with owner, priority, scope, dependencies, baseline SHA, acceptance criteria, implementation, test results/links, blockers, rollback and next step. After every substantial action including failed tests, update ROADMAP, HANDOFF, the checkpoint, docs/testing and CHANGELOG in the same or explicitly linked documentation commit; run scripts/check-roadmap.py and record whether actually executed. HANDOFF must identify one current continuation point; distinguish history, implemented, CI verified, manual acceptance, deferred, blocked and released. Never count partial/unverified criteria as done. A zero accepted count does not mean no implementation.
+Routine work within agreed scope may proceed in the working branch after checking dependencies, plan, criteria and rollback. Ask separate authorization for scope changes, real data migration, destructive/risky actions, changes to signing/secrets/CI infrastructure, main, merges, releases or distribution. Preserve product decisions in docs/checkpoints/R01.06.md. Do not weaken encryption, schema guards or tests. Migration builds require independent review, recovery evidence and signed upgrade verification before distribution. Deferred manual tests remain open. Preserve Git history; no force-push. 
