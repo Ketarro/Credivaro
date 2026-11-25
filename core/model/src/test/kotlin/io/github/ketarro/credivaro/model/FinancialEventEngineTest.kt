@@ -20,6 +20,28 @@ class FinancialEventEngineTest {
     private fun monthly(policy: MissingDayPolicy, day: Int = 31) = Recurrence.Monthly(MonthlyDay(day, policy))
     private fun clock(day: String) = Clock.fixed(d(day).atStartOfDay(ZoneOffset.UTC).toInstant(), ZoneOffset.UTC)
 
+    @Test fun mapsKnownTermsWithoutInventingDates() {
+        assertNull(knownPaymentRecurrence(ObligationTerms.Loan()))
+        assertNull(knownPaymentRecurrence(ObligationTerms.Loan(paymentDay=MonthlyDay(31,MissingDayPolicy.CLAMP))))
+        val first=d("2026-12-15")
+        assertEquals(Recurrence.OneOff(first),knownPaymentRecurrence(ObligationTerms.CreditCard(minimumPaymentDueDate=first)))
+        assertEquals(Recurrence.OneOff(first),knownPaymentRecurrence(ObligationTerms.Loan(firstDueDate=first)))
+        val monthly=checkNotNull(knownPaymentRecurrence(ObligationTerms.Installment(firstDueDate=first,
+            paymentFrequency=PaymentFrequency.MONTHLY,paymentDay=MonthlyDay(31,MissingDayPolicy.CLAMP))))
+        assertEquals(listOf("2026-12-15","2027-01-31","2027-02-28"),dates(rule(monthly),window("2026-11-01","2027-03-01")))
+    }
+    @Test fun resolvedMoveOutsideWindowDoesNotSilentlyRetireExisting() {
+        val w=window("2026-12-01","2027-01-01")
+        val r=rule(Recurrence.OneOff(d("2026-12-01")))
+        val old=generate(r,w).events.single()
+        val desired=generate(r,w,listOf(EventOverride.Move(old.key,d("2027-01-02"))))
+        assertTrue(desired.events.isEmpty())
+        assertEquals(setOf(old.key),desired.outsideWindowOverrides)
+        val plan=EventReconciler.reconcile(listOf(ExistingEvent(old)),desired,w,clock("2026-12-01"))
+        assertEquals(listOf(old),plan.keep)
+        assertEquals(setOf(old.key),plan.conflicts)
+        assertTrue(plan.retire.isEmpty())
+    }
     @Test fun clampNonLeapAndLeap() {
         val r = rule(monthly(MissingDayPolicy.CLAMP))
         assertEquals(listOf("2027-01-31","2027-02-28","2027-03-31"), dates(r, window("2027-01-01","2027-04-01")))

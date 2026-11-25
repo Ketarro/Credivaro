@@ -18,7 +18,7 @@ enum class MonetaryRole { MANDATORY, ALTERNATIVE_TARGET, INFORMATIONAL, NON_MONE
 
 sealed interface Recurrence {
     data class OneOff(val date: LocalDate) : Recurrence
-    data class Monthly(val day: MonthlyDay) : Recurrence
+    data class Monthly(val day: MonthlyDay, val firstKnownDate: LocalDate? = null) : Recurrence
     data object LastDayOfMonth : Recurrence
     data class Weekly(val anchor: LocalDate, val intervalWeeks: Int, val weekdays: Set<DayOfWeek>) : Recurrence {
         init { require(intervalWeeks > 0 && weekdays.isNotEmpty()) }
@@ -114,8 +114,14 @@ object FinancialEventEngine {
     private fun monthlyDate(month: YearMonth, recurrence: Recurrence): LocalDate? = when (recurrence) {
         is Recurrence.Monthly -> {
             val day = recurrence.day
-            if (day.day <= month.lengthOfMonth()) month.atDay(day.day)
-            else if (day.missingDayPolicy == MissingDayPolicy.CLAMP) month.atEndOfMonth() else null
+            val first = recurrence.firstKnownDate
+            when {
+                first != null && month < YearMonth.from(first) -> null
+                first != null && month == YearMonth.from(first) -> first
+                day.day <= month.lengthOfMonth() -> month.atDay(day.day)
+                day.missingDayPolicy == MissingDayPolicy.CLAMP -> month.atEndOfMonth()
+                else -> null
+            }
         }
         Recurrence.LastDayOfMonth -> month.atEndOfMonth()
         else -> error("Not monthly")
@@ -189,10 +195,25 @@ object FinancialEventEngine {
             sorted.zipWithNext().forEach { (a, b) ->
                 require(a.effectiveUntil != null && !a.effectiveUntil.isAfter(b.effectiveFrom)) { "Overlapping revisions" }
             }
+            // Validate slot ownership even across separate generation windows.
+            val owned = mutableSetOf<String>()
+            sorted.forEach { r ->
+                val keys = when (val recurrence = r.recurrence) {
+                    is Recurrence.OneOff -> listOf(Slot("once", recurrence.date))
+                    is Recurrence.ExplicitDates -> recurrence.entries.map { Slot("e:" + it.id, it.date) }
+                    is Recurrence.Monthly, Recurrence.LastDayOfMonth -> {
+                        listOfNotNull(YearMonth.from(r.effectiveFrom), r.effectiveUntil?.minusDays(1)?.let(YearMonth::from))
+                            .distinct().mapNotNull { month -> monthlyDate(month, recurrence)?.let { Slot("m:" + month, it) } }
+                    }
+                    else -> emptyList()
+                }
+                keys.filter { r.owns(it.date) }.forEach { require(owned.add(it.key)) { "Ambiguous nominal slot across revisions" } }
+            }
         }
     }
 
-    data class Generation(val events: List<FinancialEvent>, val unresolvedOverrides: Set<OccurrenceKey>)
+    data class Generation(val events: List<FinancialEvent>, val unresolvedOverrides: Set<OccurrenceKey>,
+        val outsideWindowOverrides: Set<OccurrenceKey> = emptySet())
 
     fun generate(rules: List<EventRule>, overrides: List<EventOverride>, window: EventWindow): Generation {
         validate(rules, overrides)
@@ -220,7 +241,7 @@ object FinancialEventEngine {
             }
         }
         return Generation(events.values.sortedWith(compareBy<FinancialEvent> { it.dueDate }.thenBy { it.key.id.toString() }),
-            overrideMap.keys - resolved)
+            overrideMap.keys - resolved, resolved - events.keys)
     }
 }
 
@@ -253,6 +274,9 @@ object EventReconciler {
                     conflicts.add(old.key)
             } else if (replacement != null) {
                 if (replacement == old) keep.add(old) else upsert.add(replacement)
+            } else if (old.key in generated.outsideWindowOverrides) {
+                keep.add(old)
+                conflicts.add(old.key) // Explicit move outside the window needs a durable manual update, not retirement.
             } else if (window.contains(old.dueDate)) {
                 retire.add(old.key)
             } else {
@@ -262,5 +286,26 @@ object EventReconciler {
         upsert.addAll(desired.values)
         val order = compareBy<FinancialEvent> { it.dueDate }.thenBy { it.key.id.toString() }
         return EventReconciliation(keep.sortedWith(order), upsert.sortedWith(order), retire, conflicts)
+    }
+}
+
+/** Only maps explicitly recorded terms to recurrence shape. Does not invent dates,
+ * infer a card's next minimum or derive an end date/count. Caller must supply
+ * the real revision and any known contract end before generating a schedule. */
+fun knownPaymentRecurrence(terms: ObligationTerms): Recurrence? {
+    fun fixed(first: LocalDate?, frequency: PaymentFrequency?, day: MonthlyDay?): Recurrence? {
+        if (first == null) return null
+        return when (frequency ?: if (day != null) PaymentFrequency.MONTHLY else PaymentFrequency.ONE_TIME) {
+            PaymentFrequency.ONE_TIME -> Recurrence.OneOff(first)
+            PaymentFrequency.WEEKLY -> Recurrence.Weekly(first, 1, setOf(first.dayOfWeek))
+            PaymentFrequency.EVERY_TWO_WEEKS -> Recurrence.Weekly(first, 2, setOf(first.dayOfWeek))
+            PaymentFrequency.MONTHLY -> Recurrence.Monthly(requireNotNull(day), first)
+        }
+    }
+    return when (terms) {
+        is ObligationTerms.Loan -> fixed(terms.firstDueDate, terms.paymentFrequency, terms.paymentDay)
+        is ObligationTerms.Installment -> fixed(terms.firstDueDate, terms.paymentFrequency, terms.paymentDay)
+        is ObligationTerms.CreditCard -> terms.minimumPaymentDueDate?.let { Recurrence.OneOff(it) }
+        is ObligationTerms.Other -> null
     }
 }
