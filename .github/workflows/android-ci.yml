@@ -37,7 +37,7 @@ jobs:
       - name: Install Android SDK
         run: sdkmanager "platforms;android-36" "build-tools;35.0.0"
       - name: Check and build
-        run: gradle --no-daemon :core:model:test :app:lintDebug :app:testDebugUnitTest :app:assembleDebug :core:database:lintDebug :core:database:assembleDebugAndroidTest :app:assembleDebugAndroidTest
+        run: gradle --no-daemon --no-build-cache clean :core:model:test :app:lintDebug :app:testDebugUnitTest :app:assembleDebug :core:database:lintDebug :core:database:assembleDebugAndroidTest :app:assembleDebugAndroidTest
       - name: Print generated Room schema for review
         run: find core/database/schemas -type f -name '*.json' -print -exec cat {} +
       - name: Verify checked-in Room schemas are unchanged
@@ -274,7 +274,7 @@ jobs:
           arch: ${{ matrix.arch }}
           emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
           disable-animations: true
-          script: gradle --no-daemon :core:database:connectedDebugAndroidTest :app:connectedDebugAndroidTest
+          script: gradle --no-daemon --no-build-cache clean :core:database:connectedDebugAndroidTest :app:connectedDebugAndroidTest
       - name: Upload storage reports and generated schemas
         if: always()
         uses: actions/upload-artifact@v4
