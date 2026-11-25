@@ -36,7 +36,7 @@
     <string name="obligations_nav">Credits</string>
     <string name="obligations_title">My credits</string>
     <string name="preview_session">Test only. Records persist in encrypted local storage. Use fictional data.</string>
-    <string name="add_obligation">Add obligation</string>
+    <string name="add_obligation">Add credit</string>
     <string name="edit_obligation">Edit obligation</string>
     <string name="delete_obligation">Delete obligation</string>
     <string name="delete_confirm">Permanently delete this test record, all its history and actual payments?</string>
@@ -73,7 +73,7 @@
     <string name="language_short">Language</string>
     <string name="system_short">Auto</string>
     <string name="form_lender">Lender</string>
-    <string name="form_balance">Test balance</string>
+    <string name="form_balance">Balance reported by bank</string>
     <string name="form_rate">Annual rate, %</string>
     <string name="form_payment">Scheduled payment</string>
     <string name="form_minimum">Minimum payment</string>

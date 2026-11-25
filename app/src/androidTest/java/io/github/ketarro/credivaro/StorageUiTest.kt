@@ -23,11 +23,9 @@ class StorageUiTest {
 
     @Test fun saveRecreateReadAndDelete() {
         val title = "Synthetic UI " + UUID.randomUUID().toString().take(8)
-        // A previous failed test may leave a synthetic record; dashboard Add is conditional.
-        waitFor(label(R.string.obligations_nav))
-        rule.onNodeWithText(label(R.string.obligations_nav)).activate()
-        waitFor(label(R.string.add_obligation))
-        rule.onNodeWithText(label(R.string.add_obligation)).activate()
+        // Home always provides Add, even when other synthetic records exist.
+        rule.waitUntil(30000) { rule.onAllNodesWithTag("home-add").fetchSemanticsNodes().isNotEmpty() }
+        rule.onNodeWithTag("home-add").performScrollTo().activate()
         rule.onNodeWithTag("field-${R.string.field_title}").performScrollTo().performSemanticsAction(SemanticsActions.SetText) { check(it(AnnotatedString(title))) }
         rule.onNodeWithTag("save-obligation").performScrollTo().activate()
         waitFor(title)
@@ -39,11 +37,27 @@ class StorageUiTest {
         rule.activityRule.scenario.recreate()
         waitFor(title)
         waitFor(label(R.string.ux_actions))
-        rule.onNodeWithTag("credit-actions").activate()
+        rule.onNodeWithTag("credit-actions").performScrollTo().activate()
         rule.onNodeWithText(label(R.string.delete_obligation)).activate()
         rule.onNodeWithText(label(R.string.delete), substring = false).activate()
         rule.waitUntil(30000) { rule.onAllNodesWithText(title).fetchSemanticsNodes().isEmpty() }
         waitFor(label(R.string.add_obligation))
+    }
+
+    @Test fun discardUnsavedHomeForm() {
+        val title = "Unsaved " + UUID.randomUUID().toString().take(8)
+        rule.waitUntil(30000) { rule.onAllNodesWithTag("home-add").fetchSemanticsNodes().isNotEmpty() }
+        rule.onNodeWithTag("home-add").performScrollTo().activate()
+        rule.onNodeWithTag("field-${R.string.field_title}").performScrollTo()
+            .performSemanticsAction(SemanticsActions.SetText) { check(it(AnnotatedString(title))) }
+        rule.onNodeWithContentDescription(label(R.string.back)).performScrollTo().activate()
+        waitFor(label(R.string.ux_discard_title))
+        rule.onNodeWithText(label(R.string.ux_keep_editing)).activate()
+        rule.onNodeWithTag("field-${R.string.field_title}").assertTextContains(title)
+        rule.onNodeWithContentDescription(label(R.string.back)).performScrollTo().activate()
+        rule.onNodeWithText(label(R.string.ux_discard)).activate()
+        rule.waitUntil(30000) { rule.onAllNodesWithTag("list-add").fetchSemanticsNodes().isNotEmpty() }
+        rule.onAllNodesWithText(title).assertCountEquals(0)
     }
 
     @Test fun localeSwitchAndRecreate() {

@@ -4,6 +4,7 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -173,7 +174,7 @@ private fun ObligationListCard(item: Obligation, open: () -> Unit, pay: (() -> U
                 }
                 Icon(painterResource(R.drawable.ic_chevron), null, tint = colors.onSurfaceVariant, modifier = Modifier.size(20.dp))
             }
-            Text(stringResource(R.string.form_balance), style = MaterialTheme.typography.labelMedium, color = colors.onSurfaceVariant)
+            Text(stringResource(R.string.ux_bank_balance), style = MaterialTheme.typography.labelMedium, color = colors.onSurfaceVariant)
             Text(item.balance?.totalDebt.display(), style = MaterialTheme.typography.titleLarge)
             val payment = item.payment()
             val date = item.paymentDate()
@@ -300,7 +301,7 @@ fun ObligationPreview(
                     Text(stringResource(R.string.field_currency) + ": " + detail.currency.currencyCode)
                     detail.notes?.let { Text(stringResource(R.string.field_notes), style = MaterialTheme.typography.labelMedium); Text(it) }
                     Text(stringResource(R.string.payment_fact_hint), style = MaterialTheme.typography.bodySmall)
-                    TextButton(onClick = { tab = "payments" }) { Text(stringResource(R.string.payment_history)) }
+                    TextButton(onClick = { tab = "payments"; scope.launch { scroll.scrollTo(0) } }) { Text(stringResource(R.string.payment_history)) }
                 }
             }
         }

@@ -151,7 +151,8 @@ private fun AlphaScreen(
     var about by rememberSaveable { mutableStateOf(false) }
     var obligations by rememberSaveable { mutableStateOf(false) }
     var route by rememberSaveable { mutableStateOf("list") }
-    var paymentRequested by rememberSaveable { mutableStateOf(false) }
+    // Do not reopen a possibly committed payment form after process/activity recreation.
+    var paymentRequested by remember { mutableStateOf(false) }
     val holder = rememberSaveableStateHolder()
     val homeScroll = rememberScrollState()
     val listScroll = rememberScrollState()
@@ -185,7 +186,7 @@ private fun AlphaScreen(
                 settingsSelected = settings,
                 obligationsSelected = obligations,
                 onHome = { settings = false; about = false; obligations = false },
-                onObligations = { obligations = true; settings = false; about = false },
+                onObligations = { if (obligations) { route = "list"; paymentRequested = false }; obligations = true; settings = false; about = false },
                 onSettings = { settings = true; about = false; obligations = false }
             )
         }

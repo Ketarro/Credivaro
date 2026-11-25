@@ -36,7 +36,7 @@
     <string name="obligations_nav">Кредиты</string>
     <string name="obligations_title">Мои кредиты</string>
     <string name="preview_session">Тестовый режим. Записи сохраняются в зашифрованном локальном хранилище. Используйте вымышленные данные.</string>
-    <string name="add_obligation">Добавить обязательство</string>
+    <string name="add_obligation">Добавить кредит</string>
     <string name="edit_obligation">Редактировать</string>
     <string name="delete_obligation">Удалить обязательство</string>
     <string name="delete_confirm">Безвозвратно удалить эту тестовую запись, всю её историю и фактические платежи?</string>
@@ -73,7 +73,7 @@
     <string name="language_short">Язык</string>
     <string name="system_short">Авто</string>
     <string name="form_lender">Кредитор</string>
-    <string name="form_balance">Тестовый остаток</string>
+    <string name="form_balance">Остаток по данным банка</string>
     <string name="form_rate">Годовая ставка, %</string>
     <string name="form_payment">Плановый платёж</string>
     <string name="form_minimum">Минимальный платёж</string>

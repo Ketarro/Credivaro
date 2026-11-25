@@ -84,7 +84,7 @@ internal fun PaymentJournal(obligation: Obligation, repository: PaymentRepositor
                             PaymentHistoryStatus.CANCELLED -> R.string.ux_payment_cancelled
                         }), modifier = Modifier.testTag("payment-status-" + item.status.name))
                         item.correctionReason?.let { Text(stringResource(R.string.ux_reason) + ": " + it) }
-                        if (item.status == PaymentHistoryStatus.ACTIVE && enabled) {
+                        if (item.status == PaymentHistoryStatus.ACTIVE && enabled && obligation.status == ObligationStatus.ACTIVE) {
                             Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                                 TextButton(onClick = { correcting = row }, modifier = Modifier.testTag("correct-payment")) { Text(stringResource(R.string.ux_correct)) }
                                 TextButton(onClick = { cancelling = row }, modifier = Modifier.testTag("cancel-payment")) { Text(stringResource(R.string.ux_cancel_payment)) }
@@ -148,7 +148,7 @@ internal fun PaymentEntryDialog(obligation: Obligation, repository: PaymentRepos
                 PaymentInput(notes, { notes = it.take(500) }, R.string.field_notes, "payment-notes", editable)
                 }
                 if (target != null) PaymentInput(reason, { reason = it.take(500) }, R.string.ux_reason, "correction-reason", editable)
-                if (invalid) Text(stringResource(R.string.payment_invalid), color = MaterialTheme.colorScheme.error,
+                if (invalid) Text(stringResource(if (target != null && reason.isBlank()) R.string.ux_reason else R.string.payment_invalid), color = MaterialTheme.colorScheme.error,
                     modifier = Modifier.testTag("payment-invalid"))
                 if (failed) Text(stringResource(R.string.payment_retry_hint), color = MaterialTheme.colorScheme.error)
                 if (busy) CircularProgressIndicator(Modifier.size(24.dp))
@@ -208,8 +208,10 @@ private fun PaymentCancelDialog(obligation: Obligation, repository: PaymentRepos
     var pending by remember { mutableStateOf<PaymentCorrection?>(null) }
     var busy by remember { mutableStateOf(false) }
     var failed by remember { mutableStateOf(false) }
+    var discard by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
-    AlertDialog(onDismissRequest = { if (!busy) close() },
+    fun requestClose() { if (!busy) { if (reason.isNotBlank() || pending != null) discard = true else close() } }
+    AlertDialog(onDismissRequest = { requestClose() },
         properties = DialogProperties(dismissOnBackPress = !busy, dismissOnClickOutside = false),
         title = { Text(stringResource(R.string.ux_cancel_payment)) },
         text = { Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -228,7 +230,11 @@ private fun PaymentCancelDialog(obligation: Obligation, repository: PaymentRepos
                 finally { busy = false }
             }
         }) { Text(stringResource(R.string.ux_cancel_payment)) } },
-        dismissButton = { TextButton(enabled = !busy, onClick = close) { Text(stringResource(R.string.back)) } })
+        dismissButton = { TextButton(enabled = !busy, onClick = { requestClose() }) { Text(stringResource(R.string.back)) } })
+    if (discard) AlertDialog(onDismissRequest = { discard = false }, title = { Text(stringResource(R.string.ux_discard_title)) },
+        text = { Text(stringResource(if (pending != null) R.string.payment_retry_hint else R.string.ux_discard_hint)) },
+        confirmButton = { TextButton(onClick = close) { Text(stringResource(R.string.ux_discard)) } },
+        dismissButton = { TextButton(onClick = { discard = false }) { Text(stringResource(R.string.ux_keep_editing)) } })
 }
 
 @Composable

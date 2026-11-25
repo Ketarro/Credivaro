@@ -24,7 +24,7 @@ class PaymentUiTest {
     @Test fun recordAndReadPaymentAfterRecreate() {
         val title = "Synthetic payment " + UUID.randomUUID().toString().take(8)
         val note = "Synthetic payment note " + UUID.randomUUID().toString().take(8)
-        // The dashboard only offers Add when no obligations exist. Navigate independently.
+        // Navigate to the list independently of any earlier synthetic fixture.
         waitText(label(R.string.obligations_nav))
         rule.onNodeWithText(label(R.string.obligations_nav)).activate()
         waitText(label(R.string.add_obligation))
@@ -33,7 +33,7 @@ class PaymentUiTest {
             .performSemanticsAction(SemanticsActions.SetText) { check(it(AnnotatedString(title))) }
         rule.onNodeWithTag("save-obligation").performScrollTo().activate()
         waitText(label(R.string.ux_actions))
-        rule.onNodeWithTag("credit-tab-payments").activate()
+        rule.onNodeWithTag("credit-tab-payments").performScrollTo().activate()
         waitText(label(R.string.payment_empty))
         rule.onNodeWithTag("add-payment").performScrollTo().activate()
         rule.onNodeWithTag("save-payment").activate()
@@ -54,7 +54,30 @@ class PaymentUiTest {
         rule.activityRule.scenario.recreate()
         waitText(title)
         waitText(note)
-        rule.onNodeWithTag("credit-actions").activate()
+        // Correction is a new fact, not an overwrite; cancellation retains both rows.
+        val replacementNote = "Corrected " + UUID.randomUUID().toString().take(8)
+        rule.onNodeWithTag("correct-payment").performScrollTo().activate()
+        rule.onNodeWithTag("payment-amount").performScrollTo()
+            .performSemanticsAction(SemanticsActions.SetText) { check(it(AnnotatedString("100.00"))) }
+        rule.onNodeWithTag("payment-notes").performScrollTo()
+            .performSemanticsAction(SemanticsActions.SetText) { check(it(AnnotatedString(replacementNote))) }
+        rule.onNodeWithTag("correction-reason").performScrollTo()
+            .performSemanticsAction(SemanticsActions.SetText) { check(it(AnnotatedString("Synthetic correction"))) }
+        rule.onNodeWithTag("save-payment").activate()
+        waitText(replacementNote)
+        waitTag("payment-status-REPLACED")
+        waitText(note)
+        rule.onNodeWithTag("cancel-payment").performScrollTo().activate()
+        rule.onNodeWithTag("cancel-reason").performSemanticsAction(SemanticsActions.SetText) { check(it(AnnotatedString("Synthetic cancel"))) }
+        rule.onNodeWithTag("confirm-cancel-payment").activate()
+        waitTag("payment-status-CANCELLED")
+        rule.onAllNodesWithTag("payment-status-ACTIVE").assertCountEquals(0)
+        rule.activityRule.scenario.recreate()
+        waitText(note)
+        waitText(replacementNote)
+        waitTag("payment-status-REPLACED")
+        waitTag("payment-status-CANCELLED")
+        rule.onNodeWithTag("credit-actions").performScrollTo().activate()
         rule.onNodeWithText(label(R.string.delete_obligation)).activate()
         rule.onNodeWithText(label(R.string.delete), substring = false).activate()
         rule.waitUntil(30000) { rule.onAllNodesWithText(title).fetchSemanticsNodes().isEmpty() }
