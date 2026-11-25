@@ -24,7 +24,7 @@ internal data class CheckReport(val running: Boolean = false, val results: List<
 }
 
 internal object SelfCheckSession {
-    val ids = listOf("FIN01", "FIN02", "FIN03", "FIN04", "FIN05", "FIN06", "FIN07", "FIN08", "FIN09", "FIN10") + StorageSelfCheck.ids
+    val ids = listOf("FIN01", "FIN02", "FIN03", "FIN04", "FIN05", "FIN06", "FIN07", "FIN08", "FIN09", "FIN10") + StorageSelfCheck.ids + CalendarSelfCheck.ids
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val mutable = MutableStateFlow(CheckReport())
     val state = mutable.asStateFlow()
@@ -129,6 +129,7 @@ internal object SelfCheckSession {
                     }
                 }
                 StorageSelfCheck.run(app) { publish(CheckResult(it.id, it.passed, it.elapsedMs, it.errorType)) }
+                CalendarSelfCheck.ids.forEach { id -> checkCase(id) { CalendarSelfCheck.run(id) } }
             } catch (e: CancellationException) {
                 aborted = true
                 throw e

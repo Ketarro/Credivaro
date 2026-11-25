@@ -204,4 +204,10 @@
     <string name="ux_first_date_required">Выберите первую известную дату платежа.</string>
     <string name="ux_frequency_hint">Условия сохраняются. События календаря и напоминания пока не создаются.</string>
     <string name="ux_allocation_exceeds">Распределение превышает сумму платежа.</string>
+    <string name="self_cal01">Конец месяца и високосные годы</string>
+    <string name="self_cal02">Повторения и неизвестные условия</string>
+    <string name="self_cal03">Ручной перенос и отмена</string>
+    <string name="self_cal04">Устойчивые ID и сохранение истории</string>
+    <string name="self_cal05">Банковская зона и ограничения</string>
+    <string name="self_cal06">Неизвестные суммы и проверка событий</string>
 </resources>

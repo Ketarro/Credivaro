@@ -204,4 +204,10 @@
     <string name="ux_first_date_required">Choose the first known payment date.</string>
     <string name="ux_frequency_hint">Saved terms only. Calendar events and reminders are not generated yet.</string>
     <string name="ux_allocation_exceeds">Allocation exceeds payment amount.</string>
+    <string name="self_cal01">Month ends and leap years</string>
+    <string name="self_cal02">Recurrence and unknown terms</string>
+    <string name="self_cal03">Manual date moves and cancellation</string>
+    <string name="self_cal04">Stable IDs and retained history</string>
+    <string name="self_cal05">Bank time zone and bounds</string>
+    <string name="self_cal06">Unknown amounts and event validation</string>
 </resources>

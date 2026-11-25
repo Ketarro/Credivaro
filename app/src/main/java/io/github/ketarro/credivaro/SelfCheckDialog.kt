@@ -18,7 +18,7 @@ import androidx.compose.ui.unit.dp
 internal fun SelfCheckDialog(onClose: () -> Unit) {
     val context = LocalContext.current
     val report by SelfCheckSession.state.collectAsState()
-    val names = listOf(R.string.self_fin01, R.string.self_fin02, R.string.self_fin03, R.string.self_fin04, R.string.self_fin05, R.string.self_fin06, R.string.self_fin07, R.string.self_fin08, R.string.self_fin09, R.string.self_fin10, R.string.self_db01, R.string.self_db02, R.string.self_db03, R.string.self_db04, R.string.self_db05, R.string.self_db06, R.string.self_db07, R.string.self_db08, R.string.self_pay01, R.string.self_pay02, R.string.self_pay03, R.string.self_pay04, R.string.self_pay05, R.string.self_mig01, R.string.self_mig02, R.string.self_mig03)
+    val names = listOf(R.string.self_fin01, R.string.self_fin02, R.string.self_fin03, R.string.self_fin04, R.string.self_fin05, R.string.self_fin06, R.string.self_fin07, R.string.self_fin08, R.string.self_fin09, R.string.self_fin10, R.string.self_db01, R.string.self_db02, R.string.self_db03, R.string.self_db04, R.string.self_db05, R.string.self_db06, R.string.self_db07, R.string.self_db08, R.string.self_pay01, R.string.self_pay02, R.string.self_pay03, R.string.self_pay04, R.string.self_pay05, R.string.self_mig01, R.string.self_mig02, R.string.self_mig03, R.string.self_cal01, R.string.self_cal02, R.string.self_cal03, R.string.self_cal04, R.string.self_cal05, R.string.self_cal06)
     AlertDialog(
         onDismissRequest = onClose,
         title = { Text(stringResource(R.string.self_check_title)) },
