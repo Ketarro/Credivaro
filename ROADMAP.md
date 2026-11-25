@@ -22,6 +22,8 @@ CI #54 (45485443922, e968bf9): debug compile/JVM/lint/schema PASS, API36 PASS; A
 
 CI #55 (45489811714, 8f1c179): SUCCESS, debug compilation/JVM/lint/schema/ROADMAP PASS; API26/36 each 7 storage + 4 app, total 22/22. Compatibility and persistent signing skipped in PR. R09.03 remains open pending full matrix. Next candidate R04.04: append-only correction/cancellation model, transactional repository, active-only query plus full history query, additive Room migration 2→3 retaining v1/v2, 2 additional encrypted instrumentation tests. UI actions/status not yet wired. New v3 export must be captured from compiler; schema guard expected to fail until checked in, never disable it. CI pending. No real DB migration, signed APK, version bump, or merge. 17/68.
 
+CI #56 (45515399942, e46dbd4): Gradle compilation/JVM/lint/ROADMAP PASS, API26/API36 по 9 storage + 4 app, всего 26/26 PASS, включая два новых теста корректировки. Debug FAIL только на schema guard: экспорт 3.json не отслеживался Git. Добавлен фактический экспорт Room v3 из журнала компилятора (identityHash 6ab97d3eb255241f1eac1d6f426ec257); экспорты v1/v2 и четыре прежние таблицы неизменны, добавлена payment_correction. Guard сохранён. Повторный CI необходим. UI отмены/исправления, отдельная заполненная v2 fixture, injected rollback, независимый review и подписанный upgrade ещё впереди. versionCode 11, релиза нет, 17/68.
+
 ## Прогресс
 Обязательные пункты: **17/68 (25.0%)**.
 Завершённые этапы: **0/10**.
