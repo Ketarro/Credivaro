@@ -4,6 +4,7 @@
 No published release.
 
 ### Build 17 preparation (versionCode unchanged)
+- 2026-11-25 — R05.03 / Build17 preparation: added versioned typed EventCodec for all recurrence shapes and event payloads, exact minor units as decimal strings, canonical UUID/date decoding, unknown version rejection; Android instrumentation roundtrip and invalid-payload tests added. Previous candidate CI 45538015908 in progress at inspection; new tests not yet verified. No Room activation or versionCode change. Next: transactional repository, same-owner payment links, actual v3 fixture and migration schema. 17/68 unchanged.
 - 2026-11-25: Build 16 baseline c5aaad22 — CI [push](https://github.com/Ketarro/Credivaro/actions/runs/45536421242) SUCCESS, debug/storage API26/36, persistent signing, compatibility/upgrade API26/28/29/30/36, final signed artifact 14987124149. Physical acceptance, independent review and populated recovery remain open. Build 17 preparation: feat/build17-event-storage, R05.03, additive candidate DDL and isolated encrypted fixture test; NOT wired to Room, versionCode remains 16, no new APK authorized. Next: typed codec/DAO, transactional reconciliation and link validation, actual v3 fixture and compiler-exported v4 schema, migration/recovery evidence and independent review. No checklist closure.
 
 - CI #70: repair stale scroll action on fixed Back button in discard test; assertions preserved.
