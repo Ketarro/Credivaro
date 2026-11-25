@@ -138,4 +138,20 @@
     <string name="payment_allocation_hint">Optional allocation: enter known parts only. The rest stays unallocated.</string>
     <string name="payment_invalid">Check date, positive amount, currency precision and allocation total.</string>
     <string name="payment_retry_hint">Save failed. Retry the same payment or close and check history before entering it again.</string>
+    <string name="self_fin05">Currency precision and overflow</string>
+    <string name="self_fin06">Unknown payment allocation</string>
+    <string name="self_fin07">Split and overpayment</string>
+    <string name="self_fin08">Reject invalid payments</string>
+    <string name="self_fin09">Payment date rules</string>
+    <string name="self_fin10">1000 generated allocations</string>
+    <string name="self_db07">Missing test key envelope</string>
+    <string name="self_db08">Lost test wrapping key</string>
+    <string name="self_pay01">Payment replay and reopen</string>
+    <string name="self_pay02">Reject conflicting payments</string>
+    <string name="self_pay03">Correction and cancellation history</string>
+    <string name="self_pay04">Concurrent duplicate requests</string>
+    <string name="self_pay05">Correction transaction rollback</string>
+    <string name="self_mig01">Encrypted v1 fixture to v3</string>
+    <string name="self_mig02">Populated encrypted v2 to v3</string>
+    <string name="self_mig03">Rollback v2 DDL and retry</string>
 </resources>

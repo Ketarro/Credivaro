@@ -138,4 +138,20 @@
     <string name="payment_allocation_hint">Распределение необязательно: укажите только известные части. Остаток останется нераспределённым.</string>
     <string name="payment_invalid">Проверьте дату, положительную сумму, точность валюты и распределение.</string>
     <string name="payment_retry_hint">Не удалось сохранить. Повторите ту же операцию или закройте окно и проверьте историю перед повторным вводом.</string>
+    <string name="self_fin05">Точность валют и переполнение</string>
+    <string name="self_fin06">Неизвестное распределение платежа</string>
+    <string name="self_fin07">Распределение и переплата</string>
+    <string name="self_fin08">Отклонение ошибочных платежей</string>
+    <string name="self_fin09">Проверка даты платежа</string>
+    <string name="self_fin10">1000 синтетических распределений</string>
+    <string name="self_db07">Отсутствующий тестовый контейнер ключа</string>
+    <string name="self_db08">Утрата тестового ключа</string>
+    <string name="self_pay01">Повтор платежа и открытие базы</string>
+    <string name="self_pay02">Отклонение конфликтующих платежей</string>
+    <string name="self_pay03">История исправления и отмены</string>
+    <string name="self_pay04">Одновременные повторные операции</string>
+    <string name="self_pay05">Откат транзакции исправления</string>
+    <string name="self_mig01">Миграция тестовой зашифрованной v1 → v3</string>
+    <string name="self_mig02">Миграция заполненной зашифрованной v2 → v3</string>
+    <string name="self_mig03">Откат DDL v2 и повторная миграция</string>
 </resources>

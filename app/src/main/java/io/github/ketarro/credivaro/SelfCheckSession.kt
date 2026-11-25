@@ -5,6 +5,7 @@ import android.os.Build
 import android.os.SystemClock
 import io.github.ketarro.credivaro.database.StorageSelfCheck
 import io.github.ketarro.credivaro.model.*
+import io.github.ketarro.credivaro.ui.buildPayment
 import io.github.ketarro.credivaro.ui.parsePreviewDate
 import io.github.ketarro.credivaro.ui.parsePreviewMoney
 import io.github.ketarro.credivaro.ui.summarizePreview
@@ -23,7 +24,7 @@ internal data class CheckReport(val running: Boolean = false, val results: List<
 }
 
 internal object SelfCheckSession {
-    val ids = listOf("FIN01", "FIN02", "FIN03", "FIN04") + StorageSelfCheck.ids
+    val ids = listOf("FIN01", "FIN02", "FIN03", "FIN04", "FIN05", "FIN06", "FIN07", "FIN08", "FIN09", "FIN10") + StorageSelfCheck.ids
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val mutable = MutableStateFlow(CheckReport())
     val state = mutable.asStateFlow()
@@ -78,6 +79,55 @@ internal object SelfCheckSession {
                     check(summary.totals == mapOf("RUB" to Money("RUB", 3000), "USD" to Money("USD", 20)))
                     check(summary.unknown == 1)
                 }
+                val today = LocalDate.of(2026, 1, 1)
+                val owner = Obligation(UUID.randomUUID(), "Synthetic", currency = Currency.getInstance("RUB"),
+                    bankZone = ZoneOffset.UTC, openedOn = today.minusDays(1), terms = ObligationTerms.Other(),
+                    balance = BalanceSnapshot(today, Money("RUB", 100)))
+                fun form(amount: String = "10,25", principal: String = "", interest: String = "",
+                    fees: String = "", date: String = today.toString()) =
+                    buildPayment(owner, UUID.randomUUID(), UUID.randomUUID(), date, amount, principal, interest, fees, " synthetic ", today)
+                checkCase("FIN05") {
+                    check(parsePreviewMoney("1", Currency.getInstance("JPY")) == Money("JPY", 1))
+                    check(rejected { parsePreviewMoney("1.1", Currency.getInstance("JPY")) })
+                    check(parsePreviewMoney("1.234", Currency.getInstance("KWD")) == Money("KWD", 1234))
+                    check(runCatching { Money("RUB", Long.MAX_VALUE) + Money("RUB", 1) }.exceptionOrNull() is ArithmeticException)
+                    check(rejected { Money("RUB", 1) + Money("USD", 1) })
+                }
+                checkCase("FIN06") {
+                    val p = form()
+                    check(p.amount == Money("RUB", 1025) && p.allocation.unallocated == p.amount)
+                    check(p.allocation.principal == Money("RUB", 0))
+                }
+                checkCase("FIN07") {
+                    val p = form(principal = "2", interest = "1", fees = "0.25")
+                    check(p.allocation.unallocated == Money("RUB", 700))
+                    check(form(principal = "10.25").allocation.unallocated == Money("RUB", 0))
+                    check(p.notes == "synthetic" && owner.balance?.totalDebt == Money("RUB", 100))
+                }
+                checkCase("FIN08") {
+                    check(rejected { form(amount = "0") })
+                    check(rejected { form(amount = "-1") })
+                    check(rejected { form(principal = "11") })
+                    check(rejected { form(amount = "1.001") })
+                    check(runCatching { form(amount = "999999999999999999999999") }.exceptionOrNull() is ArithmeticException)
+                }
+                checkCase("FIN09") {
+                    check(rejected { form(date = today.plusDays(1).toString()) })
+                    check(rejected { form(date = today.minusDays(2).toString()) })
+                    check(runCatching { form(date = "2026-02-30") }.exceptionOrNull() is java.time.DateTimeException)
+                }
+                checkCase("FIN10") {
+                    val random = kotlin.random.Random(42)
+                    repeat(1000) {
+                        val a = random.nextLong(1, 1000000)
+                        val b = random.nextLong(0, a)
+                        val c = random.nextLong(0, a - b + 1)
+                        val alloc = PaymentAllocation(Money("RUB", b), Money("RUB", c), Money("RUB", 0), Money("RUB", a - b - c))
+                        val p = RecordedPayment(UUID.randomUUID(), UUID.randomUUID(), owner.id, today, Money("RUB", a), alloc)
+                        check(p.allocation.total == p.amount)
+                        check(rejected { p.copy(amount = Money("RUB", a + 1)) })
+                    }
+                }
                 StorageSelfCheck.run(app) { publish(CheckResult(it.id, it.passed, it.elapsedMs, it.errorType)) }
             } catch (e: CancellationException) {
                 aborted = true
@@ -95,11 +145,14 @@ internal object SelfCheckSession {
     fun reportText(report: CheckReport): String = buildString {
         appendLine("Credivaro ${BuildConfig.VERSION_NAME} build ${BuildConfig.VERSION_CODE}")
         appendLine("Android ${Build.VERSION.RELEASE} / API ${Build.VERSION.SDK_INT}")
+        appendLine("Device: ${Build.MANUFACTURER} ${Build.MODEL}; ABI: ${Build.SUPPORTED_ABIS.joinToString()}")
+        appendLine("Page size: " + runCatching { android.system.Os.sysconf(android.system.OsConstants._SC_PAGESIZE) }.getOrNull() + " bytes")
         appendLine("Self-check: ${report.results.count { it.passed }}/${ids.size} PASS; complete=${report.complete}")
         report.results.forEach {
             appendLine("${it.id} ${if (it.passed) "PASS" else "FAIL"} ${it.ms} ms" +
                 (it.errorType?.let { type -> " ($type)" } ?: ""))
         }
-        appendLine("Synthetic isolated data only. UI/reboot/update manual checks not covered.")
+        appendLine("Total: ${report.results.sumOf { it.ms }} ms; failed=${report.results.count { !it.passed }}; missing=${ids.filterNot { id -> report.results.any { it.id == id } }.joinToString()}")
+        appendLine("Synthetic isolated data only. Not a signed upgrade, actual UI, reboot, disk-full or complete security test.")
     }
 }

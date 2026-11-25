@@ -15,7 +15,7 @@ class SelfCheckTest {
     @Test fun runSameChecksAsPhysicalDevice() = runBlocking {
         val context = ApplicationProvider.getApplicationContext<Context>()
         SelfCheckSession.start(context)
-        val report = withTimeout(180_000) { SelfCheckSession.state.first { !it.running } }
+        val report = withTimeout(300_000) { SelfCheckSession.state.first { !it.running } }
         assertTrue("Self-check incomplete", report.complete)
         assertEquals(SelfCheckSession.ids, report.results.map { it.id })
         assertTrue(SelfCheckSession.reportText(report), report.results.all { it.passed })

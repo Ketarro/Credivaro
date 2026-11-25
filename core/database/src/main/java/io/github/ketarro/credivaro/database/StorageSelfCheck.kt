@@ -19,7 +19,7 @@ import java.util.UUID
 
 /** Debug-only synthetic checks. No caller-provided database name or production repository. */
 object StorageSelfCheck {
-    val ids: List<String> = listOf("DB01", "DB02", "DB03", "DB04", "DB05", "DB06")
+    val ids: List<String> = listOf("DB01", "DB02", "DB03", "DB04", "DB05", "DB06") + PaymentSelfCheck.ids
     data class Result(val id: String, val passed: Boolean, val elapsedMs: Long, val errorType: String? = null)
     private class ExpectedRollback : RuntimeException()
     private val date = LocalDate.of(2026, 1, 1)
@@ -137,6 +137,7 @@ object StorageSelfCheck {
                         keyFile.writeBytes(original)
                         EncryptedStorage.open(app, name, clock).use { check(it.repository.find(value.id) == value) }
                     }
+                    else -> PaymentSelfCheck.runCase(id, app, name, clock)
                 }
             } catch (e: CancellationException) {
                 throw e
@@ -155,6 +156,8 @@ object StorageSelfCheck {
                         }
                         KeyStore.getInstance("AndroidKeyStore").apply { load(null); deleteEntry(DatabaseKey.alias(name)) }
                         check(listOf("", "-wal", "-shm", "-journal").none { File(database.path + it).exists() })
+                        check(listOf("", ".bak", ".new").none { File(keyFile.path + it).exists() })
+                        check(!KeyStore.getInstance("AndroidKeyStore").apply { load(null) }.containsAlias(DatabaseKey.alias(name)))
                     } catch (_: Exception) {
                         failure = "CleanupFailed"
                     }
