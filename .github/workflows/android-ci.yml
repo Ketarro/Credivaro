@@ -1,7 +1,7 @@
 name: Android CI
 on:
   push:
-    branches: [main, "feat/android-alpha-bootstrap"]
+    branches: ["**"]
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -16,7 +16,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     outputs:
-      signed: ${{ steps.alpha_sign.outputs.signed }}
       apk_artifact: ${{ steps.compatibility_input.outputs.name }}
       version_code: ${{ steps.compatibility_input.outputs.version_code }}
     steps:
@@ -57,31 +56,61 @@ jobs:
             core/database/schemas/
           if-no-files-found: warn
           retention-days: 14
+      - name: Inspect built APK
+        id: compatibility_input
+        run: |
+          set -euo pipefail
+          apk=app/build/outputs/apk/debug/app-debug.apk
+          badging="$("$ANDROID_HOME/build-tools/35.0.0/aapt2" dump badging "$apk")"
+          version_code="$(printf '%s\n' "$badging" | grep "^package:" | grep -o "versionCode='[0-9]*'" | cut -d "'" -f 2)"
+          [[ "$version_code" =~ ^[0-9]+$ ]]
+          echo "version_code=$version_code" >> "$GITHUB_OUTPUT"
+          echo "name=credivaro-v0.1.0-alpha-build${version_code}-temporary-debug" >> "$GITHUB_OUTPUT"
+          sha256sum "$apk"
       - name: Upload temporary debug APK (clean installs only)
         uses: actions/upload-artifact@v4
         with:
-          name: credivaro-v0.1.0-alpha-build13-temporary-debug
+          name: ${{ steps.compatibility_input.outputs.name }}
           path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 14
 
-      # Only sign from the maintainer's trusted branches, never from pull_request.
+  sign:
+    # Sign only owner-repository branch builds after BOTH clean build and emulator tests.
+    # No branch checkout, Gradle, or branch scripts run in the signing job.
+    if: github.repository == 'Ketarro/Credivaro' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && startsWith(github.ref, 'refs/heads/')
+    needs: [debug, storage]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    outputs:
+      apk_artifact: ${{ steps.alpha_sign.outputs.name }}
+    steps:
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: android-actions/setup-android@v4
+        with:
+          cmdline-tools-version: 12266719
+      - name: Install APK signing tools
+        run: sdkmanager "build-tools;35.0.0"
+      - name: Download exact tested APK
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ needs.debug.outputs.apk_artifact }}
+          path: unsigned
       - name: Sign alpha APK with persistent key
         id: alpha_sign
-        if: github.repository == 'Ketarro/Credivaro' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/feat/android-alpha-bootstrap')
         shell: bash
         env:
           ALPHA_KEYSTORE_B64: ${{ secrets.ALPHA_KEYSTORE_B64 }}
           ALPHA_KEYSTORE_PASSWORD: ${{ secrets.ALPHA_KEYSTORE_PASSWORD }}
+          VERSION_CODE: ${{ needs.debug.outputs.version_code }}
         run: |
           set -euo pipefail
-          if [[ -z "$ALPHA_KEYSTORE_B64" && -z "$ALPHA_KEYSTORE_PASSWORD" ]]; then
-            echo "::notice::Persistent alpha key is not configured. Only temporary debug APK is available."
-            echo "signed=false" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
+          [[ "$VERSION_CODE" =~ ^[0-9]+$ ]]
           if [[ -z "$ALPHA_KEYSTORE_B64" || -z "$ALPHA_KEYSTORE_PASSWORD" ]]; then
-            echo "::error::Incomplete alpha signing configuration."
+            echo "::error::Persistent alpha signing configuration is missing or incomplete."
             exit 1
           fi
           umask 077
@@ -89,61 +118,34 @@ jobs:
           trap 'rm -rf -- "$key_dir"' EXIT
           printf '%s' "$ALPHA_KEYSTORE_B64" | base64 --decode > "$key_dir/alpha.p12"
           unset ALPHA_KEYSTORE_B64
-          apksigner="${ANDROID_HOME}/build-tools/35.0.0/apksigner"
-          mkdir -p "$RUNNER_TEMP/credivaro-alpha"
-          output="$RUNNER_TEMP/credivaro-alpha/credivaro-v0.1.0-alpha-build13.apk"
+          apksigner="$ANDROID_HOME/build-tools/35.0.0/apksigner"
+          name="credivaro-v0.1.0-alpha-build${VERSION_CODE}"
+          mkdir -p signed
+          output="signed/$name.apk"
           "$apksigner" sign --ks "$key_dir/alpha.p12" --ks-type PKCS12 \
             --ks-key-alias credivaro-alpha --ks-pass env:ALPHA_KEYSTORE_PASSWORD \
-            --key-pass env:ALPHA_KEYSTORE_PASSWORD --out "$output" \
-            app/build/outputs/apk/debug/app-debug.apk
+            --key-pass env:ALPHA_KEYSTORE_PASSWORD --out "$output" unsigned/app-debug.apk
+          unset ALPHA_KEYSTORE_PASSWORD
           verification="$("$apksigner" verify --verbose --print-certs "$output")"
           printf '%s\n' "$verification"
           expected_sha256="d26244a7cdf0207f6bf0f5c54ad557c89b2e1ae4357bb07ae070085de66c22c8"
           actual_sha256="$(printf '%s\n' "$verification" | sed -n 's/^Signer #1 certificate SHA-256 digest: //p')"
-          if [[ "$actual_sha256" != "$expected_sha256" ]]; then
-            echo "::error::Alpha signing certificate differs from Build 4."
-            exit 1
-          fi
-          (cd "$(dirname "$output")" && sha256sum "$(basename "$output")" > "$(basename "$output").sha256")
+          [[ "$actual_sha256" == "$expected_sha256" ]] || { echo "::error::Alpha signing certificate differs from Build 4."; exit 1; }
+          (cd signed && sha256sum "$name.apk" > "$name.apk.sha256")
+          echo "name=$name-signed-candidate" >> "$GITHUB_OUTPUT"
           echo "Alpha certificate matches Build 4."
-          echo "signed=true" >> "$GITHUB_OUTPUT"
-      - name: Upload persistently signed alpha APK
-        if: steps.alpha_sign.outputs.signed == 'true'
+      - name: Upload signed candidate for emulator verification
         uses: actions/upload-artifact@v4
         with:
-          name: credivaro-v0.1.0-alpha-build13-signed
-          path: |
-            ${{ runner.temp }}/credivaro-alpha/credivaro-v0.1.0-alpha-build13.apk
-            ${{ runner.temp }}/credivaro-alpha/credivaro-v0.1.0-alpha-build13.apk.sha256
+          name: ${{ steps.alpha_sign.outputs.name }}
+          path: signed/
           if-no-files-found: error
           retention-days: 14
 
-      - name: Select APK for compatibility checks
-        id: compatibility_input
-        env:
-          SIGNED: ${{ steps.alpha_sign.outputs.signed }}
-        run: |
-          set -euo pipefail
-          if [[ "$SIGNED" == true ]]; then
-            name=credivaro-v0.1.0-alpha-build13-signed
-            apk="$RUNNER_TEMP/credivaro-alpha/credivaro-v0.1.0-alpha-build13.apk"
-          else
-            name=credivaro-v0.1.0-alpha-build13-temporary-debug
-            apk=app/build/outputs/apk/debug/app-debug.apk
-          fi
-          badging="$("$ANDROID_HOME/build-tools/35.0.0/aapt2" dump badging "$apk")"
-          version_code="$(printf '%s\n' "$badging" | grep "^package:" | grep -o "versionCode='[0-9]*'" | cut -d "'" -f 2)"
-          test -n "$version_code"
-          echo "name=$name" >> "$GITHUB_OUTPUT"
-          echo "version_code=$version_code" >> "$GITHUB_OUTPUT"
-          sha256sum "$apk"
-
   compatibility:
     name: Install and launch / API ${{ matrix.api }}
-    needs: debug
-    # Trusted branch runs exercise the actual signed distribution APK, not a rebuilt debug substitute.
-    # PR builds continue to run JVM tests and lint without signing secrets.
-    if: github.event_name != 'pull_request'
+    needs: [debug, sign]
+    # Only the actual persistently signed candidate is eligible for this matrix.
     runs-on: ubuntu-latest
     timeout-minutes: 35
     strategy:
@@ -179,12 +181,10 @@ jobs:
       - name: Download current run APK
         uses: actions/download-artifact@v4
         with:
-          name: ${{ needs.debug.outputs.apk_artifact }}
+          name: ${{ needs.sign.outputs.apk_artifact }}
           path: compatibility/current
       - name: Download exact distributed Build 11 for upgrade
         id: original
-        if: needs.debug.outputs.version_code == '13'
-        continue-on-error: true
         uses: actions/download-artifact@v4
         with:
           name: credivaro-v0.1.0-alpha-build11-signed
@@ -194,7 +194,7 @@ jobs:
           path: compatibility/original
       - name: Prepare diagnostics
         env:
-          SIGNED: ${{ needs.debug.outputs.signed }}
+          SIGNED: "true"
           ORIGINAL: ${{ steps.original.outcome }}
         run: |
           mkdir -p compatibility/reports
@@ -214,9 +214,10 @@ jobs:
         uses: reactivecircus/android-emulator-runner@v2
         env:
           EXPECTED_API: ${{ matrix.api }}
-          CURRENT_SIGNED: ${{ needs.debug.outputs.signed }}
+          CURRENT_SIGNED: "true"
           EXPECTED_VERSION_CODE: ${{ needs.debug.outputs.version_code }}
           BASELINE_VERSION_CODE: '11'
+          REQUIRE_SIGNED_UPGRADE: 'true'
         with:
           api-level: ${{ matrix.api }}
           target: ${{ matrix.target }}
@@ -287,4 +288,24 @@ jobs:
             app/build/reports/androidTests/
             core/database/schemas/
           if-no-files-found: warn
+          retention-days: 14
+
+  signed_test_apk:
+    name: Signed test APK after compatibility matrix
+    needs: [debug, sign, compatibility]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: ${{ needs.sign.outputs.apk_artifact }}
+          path: verified
+      - name: Verify artifact checksum
+        working-directory: verified
+        run: sha256sum -c *.sha256
+      - uses: actions/upload-artifact@v4
+        with:
+          name: credivaro-v0.1.0-alpha-build${{ needs.debug.outputs.version_code }}-signed
+          path: verified/
+          if-no-files-found: error
           retention-days: 14

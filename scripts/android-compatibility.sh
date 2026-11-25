@@ -115,7 +115,7 @@ for kind in original current; do
 done
 # Update the known persistent baseline certificate to the current signed APK.
 # No physical user data exists in this CI sandbox.
-if [[ "$status" == 0 && "$CURRENT_SIGNED" == true && "$EXPECTED_VERSION_CODE" == 11 ]]; then
+if [[ "$status" == 0 && "$CURRENT_SIGNED" == true && ( "$EXPECTED_VERSION_CODE" == 11 || "${REQUIRE_SIGNED_UPGRADE:-false}" == true ) ]]; then
   mapfile -t originals < <(find compatibility/original -type f -name '*.apk' 2>/dev/null || true)
   mapfile -t currents < <(find compatibility/current -type f -name '*.apk' 2>/dev/null || true)
   if [[ "${#originals[@]}" == 1 && "${#currents[@]}" == 1 ]]; then
@@ -139,6 +139,7 @@ if [[ "$status" == 0 && "$CURRENT_SIGNED" == true && "$EXPECTED_VERSION_CODE" ==
     echo "PASS signed update, retained sandbox and wrapped key, storage ready API $api" | tee "$report/upgrade/result.txt"
   else
     echo "Update test skipped: baseline unavailable" | tee "$report/upgrade-skipped.txt"
+    if [[ "${REQUIRE_SIGNED_UPGRADE:-false}" == true ]]; then status=1; fi
   fi
 fi
 exit "$status"
