@@ -33,3 +33,9 @@ google-services.json
 
 # Android Profiling
 *.hprof
+
+# Private signing key material
+*.p12
+*.pfx
+*.keystore.base64
+*.p12.base64

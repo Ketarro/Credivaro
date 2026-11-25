@@ -1,0 +1,7 @@
+# Obligation domain foundation — v0.1.0-alpha
+
+Adds pure JVM domain models for loans, cards, installments and manual obligations. Fields are optional where unknown; zero is distinct from unknown. Monetary values use exact minor units and a matching currency. User-entered bank snapshots are separate from terms. Credit limit, minimum payment, grace targets and fee-free cash limit are independent facts; no automatic bank calculation. AnnualRate is a non-negative percentage in this initial scope. MonthlyDay has an explicit missing-day policy; event generation is not implemented yet.
+
+ObligationValidator returns stable field identifiers and error codes for future localized UI. Currency uses JVM Currency metadata in this first slice; versioned currency scales remain a future decision. Nonnegative debt fields represent debt amounts only; positive card balance/overpayment requires a separate future field. Validation allows missing terms but rejects empty reconciliation snapshots. No persistence or real financial records yet. Sixteen new domain test cases are provided in addition to five existing Money tests. Test execution remains subject to CI.
+
+CI repair: initial run 45313692141 failed before compilation because sdkmanager was not found. Add Android SDK setup action with explicit command-line tools version before installing platform/build tools. Verify new run before claiming build success. Gradle wrapper and encrypted storage remain separate tasks.
