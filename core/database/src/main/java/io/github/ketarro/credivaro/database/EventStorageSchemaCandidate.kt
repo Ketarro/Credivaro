@@ -12,26 +12,30 @@ internal object EventStorageSchemaCandidate {
         """CREATE TABLE event_series (
             id TEXT NOT NULL PRIMARY KEY, obligationId TEXT NOT NULL,
             type TEXT NOT NULL, recurrenceFamily TEXT NOT NULL,
-            UNIQUE(id, obligationId),
+            
             FOREIGN KEY(obligationId) REFERENCES obligation(id) ON DELETE CASCADE
         )""",
         """CREATE INDEX event_series_owner ON event_series(obligationId)""",
+        """CREATE UNIQUE INDEX index_event_series_id_obligationId ON event_series(id, obligationId)""",
         """CREATE TABLE event_rule_revision (
             id TEXT NOT NULL PRIMARY KEY, seriesId TEXT NOT NULL,
             effectiveFrom TEXT NOT NULL, effectiveUntil TEXT,
-            payload TEXT NOT NULL, UNIQUE(id, seriesId),
+            payload TEXT NOT NULL,
             CHECK(effectiveUntil IS NULL OR effectiveUntil > effectiveFrom),
             FOREIGN KEY(seriesId) REFERENCES event_series(id) ON DELETE CASCADE
         )""",
         """CREATE INDEX event_revision_series ON event_rule_revision(seriesId, effectiveFrom)""",
+        """CREATE UNIQUE INDEX index_event_rule_revision_id_seriesId ON event_rule_revision(id, seriesId)""",
         """CREATE TABLE event_occurrence (
             id TEXT NOT NULL PRIMARY KEY, seriesId TEXT NOT NULL, revisionId TEXT NOT NULL,
             slot TEXT NOT NULL, nominalDate TEXT NOT NULL, dueDate TEXT NOT NULL,
             payload TEXT NOT NULL, retired INTEGER NOT NULL CHECK(retired IN (0,1)),
-            UNIQUE(seriesId, slot), UNIQUE(id, seriesId),
+            
             FOREIGN KEY(seriesId) REFERENCES event_series(id) ON DELETE CASCADE,
             FOREIGN KEY(revisionId, seriesId) REFERENCES event_rule_revision(id, seriesId) ON DELETE NO ACTION
         )""",
+        """CREATE UNIQUE INDEX index_event_occurrence_seriesId_slot ON event_occurrence(seriesId, slot)""",
+        """CREATE UNIQUE INDEX index_event_occurrence_id_seriesId ON event_occurrence(id, seriesId)""",
         """CREATE INDEX event_occurrence_revision ON event_occurrence(revisionId, seriesId)""",
         """CREATE INDEX event_occurrence_due ON event_occurrence(dueDate)""",
         """CREATE TABLE event_override (
