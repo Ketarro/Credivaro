@@ -3,6 +3,8 @@
 ## [Unreleased] — v0.1.0-alpha
 No published release.
 
+- CI #70: repair stale scroll action on fixed Back button in discard test; repeat all checks, assertions preserved.
+
 ### Build 15 forms (versionCode 15)
 - Local lender picker, exact display grouping, inline errors, persistent form footer, saved explicit payment frequency/day policy for loans/installments; validation, legacy codec, encrypted roundtrip and UI tests. CI pending; events/reminders not generated, no release.
 ### Build 14 form ergonomics and persistent test signing (versionCode 14)

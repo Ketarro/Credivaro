@@ -10,3 +10,5 @@
 - [ ] E08: исправление и отмена платежей, видимая история, банк-снимок неизменен; RU/EN, тёмная/светлая темы, системный календарь/зона, TalkBack, keyboard.
 - [ ] E09: после подтверждённого подписанного CI и допуска — update на тестовом устройстве с прежним постоянным сертификатом, синтетические данные до/после, force-stop/reboot; временная подпись несовместима.
 Отчёт: PASS/FAIL/SKIP/BLOCKED, телефон/API, CLEAN/UPDATE, self-check и фактические результаты. Не считать R05/R06 завершёнными.
+
+CI #68 Build14 PR SUCCESS (debug, API26/36; sign/compatibility skipped). CI #70 Build15 debug SUCCESS, API26 10 storage tests and app run 6 tests with 1 failure: StorageUiTest.discardUnsavedHomeForm attempted performScrollTo on the now-fixed header Back button without a scrollable parent. API36 still running when inspected. Remove performScrollTo only from two fixed Back activations; same clicks, discard dialog, retained draft, and no saved record assertions remain. No product code changes or weakened criteria. Re-run clean CI; permanent signing push results still unverified.
