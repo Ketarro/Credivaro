@@ -6,4 +6,6 @@ Open-source Android app for intelligent debt management, loan tracking, credit c
 - [HANDOFF.md](HANDOFF.md) — current checkpoint and next steps / передача контекста.
 - [AGENTS.md](AGENTS.md) — development rules / обязательные правила.
 
-- [AI_FRAMEWORK entrypoint](.ai-framework/ENTRYPOINT.md) — обязательный вход через AGENTS; [INIT-001](.ai-framework/checkpoints/INIT-001.md) — аудит существующего проекта, PROJECT_ZERO gate. Не является разрешением на реализацию или релиз.
+- [Checkpoints](docs/checkpoints/) — контрольные точки.
+- [Testing](docs/testing/) — отчёты проверок.
+- [CHANGELOG](CHANGELOG.md) — история сборок.
