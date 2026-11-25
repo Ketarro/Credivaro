@@ -65,6 +65,50 @@ internal class EventStorageCandidate(private val db: SupportSQLiteDatabase, priv
                 rule.effectiveUntil?.toString(), EventCodec.encodeRule(rule)))
     }
 
+    /** Explicit edit of a materialized future slot, with optimistic snapshot validation.
+     * Null clears the exception. Linked or historical slots require separate review.
+     * Candidate only: notification outbox must be added before production activation.
+     */
+    fun editOverride(expected: FinancialEvent, replacement: EventOverride?): FinancialEvent = atomic {
+        val key = expected.key
+        require(replacement == null || replacement.key == key)
+        val current = db.query("""SELECT o.payload,o.retired,s.obligationId,
+            EXISTS(SELECT 1 FROM event_payment_link l WHERE l.occurrenceId=o.id)
+            FROM event_occurrence o JOIN event_series s ON s.id=o.seriesId WHERE o.id=?""",
+            arrayOf(key.id.toString())).use { c ->
+            require(c.moveToFirst() && c.getInt(1) == 0 && c.getInt(3) == 0) { "Missing, retired or linked event" }
+            EventCodec.decodeEvent(c.getString(0)).also {
+                require(it == expected && it.obligationId.toString() == c.getString(2)) { "Stale event snapshot" }
+            }
+        }
+        val today = LocalDate.now(clock.withZone(current.bankZone))
+        require(!current.nominalDate.isBefore(today) && !current.dueDate.isBefore(today)) { "Historical event" }
+        val targetDate = (replacement as? EventOverride.Move)?.bankDate ?: current.nominalDate
+        require(!targetDate.isBefore(today) && targetDate.isBefore(today.plusMonths(12))) { "Outside editable horizon" }
+        val allRules = rules(current.obligationId)
+        val previous = overrides(current.obligationId)
+        val proposed = previous.filterNot { it.key == key } + listOfNotNull(replacement)
+        val generation = FinancialEventEngine.generate(allRules, proposed, EventWindow(targetDate, targetDate.plusDays(1)))
+        require(generation.unresolvedOverrides.isEmpty()) { "Unresolved override" }
+        val updated = generation.events.singleOrNull { it.key == key }
+            ?: error("Nominal slot no longer exists")
+        require(updated.revisionId == current.revisionId && updated.nominalDate == current.nominalDate &&
+            updated.copy(dueDate = current.dueDate, overridden = current.overridden, cancelled = current.cancelled) == current) {
+            "Rule changed; reconcile before editing"
+        }
+        val args = arrayOf(key.seriesId.toString(), key.slot)
+        db.execSQL("DELETE FROM event_override WHERE seriesId=? AND slot=?", args)
+        if (replacement != null) {
+            db.execSQL("INSERT INTO event_override(seriesId,slot,kind,movedDate) VALUES (?,?,?,?)",
+                arrayOf(key.seriesId.toString(), key.slot,
+                    if (replacement is EventOverride.Move) "MOVE" else "CANCEL",
+                    (replacement as? EventOverride.Move)?.bankDate?.toString()))
+        }
+        db.execSQL("UPDATE event_occurrence SET dueDate=?,payload=? WHERE id=?",
+            arrayOf(updated.dueDate.toString(), EventCodec.encodeEvent(updated), key.id.toString()))
+        updated
+    }
+
     /** Explicit association only. No inference, allocation or balance mutation. */
     fun linkPayment(eventId: UUID, paymentId: UUID) = atomic {
         val e = eventId.toString()

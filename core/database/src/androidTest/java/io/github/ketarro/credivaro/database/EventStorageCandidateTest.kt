@@ -63,8 +63,23 @@ class EventStorageCandidateTest {
                 val id = first.upsert.first().key.id
                 assertTrue(runCatching { store.linkPayment(id,wrongPayment) }.isFailure)
                 assertTrue(runCatching { store.linkPayment(id,corrected) }.isFailure)
+                val original = first.upsert.last()
+                val moved = store.editOverride(original, EventOverride.Move(original.key, date.plusMonths(1).plusDays(1)))
+                assertEquals(original.key, moved.key)
+                assertEquals(date.plusMonths(1).plusDays(1), moved.dueDate)
+                assertTrue(moved.overridden)
+                assertTrue(runCatching { store.editOverride(original, null) }.isFailure)
+                assertTrue(runCatching { store.editOverride(moved, EventOverride.Move(moved.key,date.minusDays(1))) }.isFailure)
+                val cancelled = store.editOverride(moved, EventOverride.Cancel(moved.key))
+                assertTrue(cancelled.cancelled)
+                assertTrue(runCatching { store.linkPayment(cancelled.key.id,payment) }.isFailure)
+                assertEquals(original, store.editOverride(cancelled, null))
+                assertEquals(0,count(db,"event_override"))
+                assertTrue(store.reconcile(owner,window).upsert.isEmpty())
                 store.linkPayment(id,payment)
                 store.linkPayment(id,payment)
+                assertTrue(runCatching { store.editOverride(first.upsert.first(), EventOverride.Cancel(first.upsert.first().key)) }.isFailure)
+                store.editOverride(original, EventOverride.Move(original.key,date.plusMonths(1).plusDays(1)))
                 assertEquals(1,count(db,"event_payment_link"))
             }
             open().use { helper ->
@@ -72,6 +87,7 @@ class EventStorageCandidateTest {
                 assertEquals(2,count(db,"event_occurrence"))
                 assertEquals(1,count(db,"event_payment_link"))
                 assertEquals(3,count(db,"payment"))
+                assertEquals(1,count(db,"event_override"))
                 assertTrue(EventStorageCandidate(db,clock).reconcile(owner,window).upsert.isEmpty())
                 db.query("PRAGMA foreign_key_check").use { assertFalse(it.moveToFirst()) }
             }
