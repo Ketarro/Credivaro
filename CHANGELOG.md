@@ -3,6 +3,8 @@
 ## [Unreleased] — v0.1.0-alpha
 No published release.
 
+### Build 15 forms (versionCode 15)
+- Local lender picker, exact display grouping, inline errors, persistent form footer, saved explicit payment frequency/day policy for loans/installments; validation, legacy codec, encrypted roundtrip and UI tests. CI pending; events/reminders not generated, no release.
 ### Build 14 form ergonomics and persistent test signing (versionCode 14)
 - Material calendar fields, bank-day shortcuts and bounds, localized currency labels, safe currency change, exact unallocated preview; calendar unit/UI regression.
 - Owner authorized persistent alpha signing on owner-branch CI after tests; separate signing job and required signed upgrade matrix, final verified artifact only after success. CI pending; no release.
