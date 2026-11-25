@@ -47,6 +47,24 @@ class StorageUiTest {
         waitFor(label(R.string.add_obligation))
     }
 
+    @Test fun explicitFrequencyNeedsDateAndDiscardIsSafe() {
+        val title = "Frequency draft " + UUID.randomUUID().toString().take(8)
+        rule.waitUntil(30000) { rule.onAllNodesWithTag("home-add").fetchSemanticsNodes().isNotEmpty() }
+        rule.onNodeWithTag("home-add").performScrollTo().activate()
+        rule.onNodeWithTag("field-${R.string.field_title}").performScrollTo()
+            .performSemanticsAction(SemanticsActions.SetText) { check(it(AnnotatedString(title))) }
+        rule.onNodeWithText(label(R.string.form_additional)).performScrollTo().activate()
+        rule.onNodeWithTag("frequency-select").performScrollTo().activate()
+        rule.onNodeWithTag("frequency-WEEKLY").activate()
+        rule.onNodeWithTag("save-obligation").activate()
+        waitFor(label(R.string.invalid_fields))
+        rule.onNodeWithContentDescription(label(R.string.back)).activate()
+        waitFor(label(R.string.ux_discard_title))
+        rule.onNodeWithText(label(R.string.ux_discard)).activate()
+        rule.waitUntil(30000) { rule.onAllNodesWithTag("list-add").fetchSemanticsNodes().isNotEmpty() }
+        rule.onAllNodesWithText(title).assertCountEquals(0)
+    }
+
     @Test fun discardUnsavedHomeForm() {
         val title = "Unsaved " + UUID.randomUUID().toString().take(8)
         rule.waitUntil(30000) { rule.onAllNodesWithTag("home-add").fetchSemanticsNodes().isNotEmpty() }

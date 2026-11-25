@@ -26,6 +26,13 @@ object ObligationValidator {
             if (start != null && end != null && end.isBefore(start)) issue(field, ValidationCode.INVALID_DATE_ORDER)
         }
 
+        fun schedule(frequency: PaymentFrequency?, anchor: LocalDate?, monthly: MonthlyDay?) {
+            // Legacy v1 payloads may have only a monthly rule; preserve without inventing dates.
+            if (frequency == null) return
+            if (anchor == null) issue("terms.firstDueDate", ValidationCode.REQUIRED)
+            if (frequency == PaymentFrequency.MONTHLY && monthly == null) issue("terms.paymentDay", ValidationCode.REQUIRED)
+            if (frequency != PaymentFrequency.MONTHLY && monthly != null) issue("terms.paymentDay", ValidationCode.INVALID_DATE_ORDER)
+        }
         if (value.title.isBlank()) issue("title", ValidationCode.REQUIRED)
         if (value.currency.defaultFractionDigits !in 0..3) issue("currency", ValidationCode.UNSUPPORTED_CURRENCY)
         value.balance?.let {
@@ -43,6 +50,7 @@ object ObligationValidator {
                 amount("terms.scheduledPayment", t.scheduledPayment)
                 count("terms.termMonths", t.termMonths)
                 ordered("terms.firstDueDate", value.openedOn, t.firstDueDate)
+                schedule(t.paymentFrequency, t.firstDueDate, t.paymentDay)
             }
             is ObligationTerms.CreditCard -> {
                 amount("terms.creditLimit", t.creditLimit)
@@ -65,6 +73,7 @@ object ObligationValidator {
                 amount("terms.fees", t.fees)
                 count("terms.installmentCount", t.installmentCount)
                 ordered("terms.firstDueDate", value.openedOn, t.firstDueDate)
+                schedule(t.paymentFrequency, t.firstDueDate, t.paymentDay)
                 val original = t.originalAmount
                 val down = t.downPayment
                 if (original != null && down != null && original.currency == down.currency &&

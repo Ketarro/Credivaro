@@ -412,6 +412,7 @@ private fun PreviewEditor(existing: Obligation?, lenders: List<String>, busy: Bo
         else -> null
     }
     var frequency by rememberSaveable { mutableStateOf((oldFrequency ?: oldDay?.let { PaymentFrequency.MONTHLY })?.name.orEmpty()) }
+    var scheduleTouched by rememberSaveable { mutableStateOf(false) }
     var monthlyDay by rememberSaveable { mutableStateOf(oldDay?.day ?: 0) }
     var monthlyPolicy by rememberSaveable { mutableStateOf(oldDay?.missingDayPolicy?.name.orEmpty()) }
     var expanded by rememberSaveable { mutableStateOf(existing != null) }
@@ -524,7 +525,7 @@ private fun PreviewEditor(existing: Obligation?, lenders: List<String>, busy: Bo
                     DropdownMenu(expanded = frequencyMenu, onDismissRequest = { frequencyMenu = false }) {
                         (listOf("") + PaymentFrequency.entries.map { it.name }).forEach { choice ->
                             DropdownMenuItem(text = { Text(stringResource(frequencyLabel(choice))) }, onClick = {
-                                frequency = choice; dirty = true; frequencyMenu = false
+                                frequency = choice; scheduleTouched = true; dirty = true; frequencyMenu = false
                                 if (choice != PaymentFrequency.MONTHLY.name) { monthlyDay = 0; monthlyPolicy = "" }
                             }, modifier = Modifier.testTag("frequency-" + choice))
                         }
@@ -539,14 +540,14 @@ private fun PreviewEditor(existing: Obligation?, lenders: List<String>, busy: Bo
                         }
                         DropdownMenu(expanded = dayMenu, onDismissRequest = { dayMenu = false }) {
                             (1..31).forEach { day -> DropdownMenuItem(text = { Text(day.toString()) }, onClick = {
-                                monthlyDay = day; dirty = true; dayMenu = false
+                                monthlyDay = day; scheduleTouched = true; dirty = true; dayMenu = false
                             }) }
                         }
                     }
                     Text(stringResource(R.string.ux_short_month))
                     MissingDayPolicy.entries.forEach { policy ->
                         Row(Modifier.fillMaxWidth().heightIn(min = 48.dp).selectable(monthlyPolicy == policy.name,
-                            onClick = { monthlyPolicy = policy.name; dirty = true }, role = Role.RadioButton),
+                            onClick = { monthlyPolicy = policy.name; scheduleTouched = true; dirty = true }, role = Role.RadioButton),
                             verticalAlignment = Alignment.CenterVertically) {
                             RadioButton(monthlyPolicy == policy.name, onClick = null)
                             Spacer(Modifier.width(8.dp))
@@ -555,16 +556,16 @@ private fun PreviewEditor(existing: Obligation?, lenders: List<String>, busy: Bo
                     }
                     if (error && (monthlyDay == 0 || monthlyPolicy.isBlank())) Text(stringResource(R.string.ux_month_rule_required), color = MaterialTheme.colorScheme.error)
                 }
-                if (error && frequency.isNotBlank() && due.isBlank()) Text(stringResource(R.string.ux_first_date_required), color = MaterialTheme.colorScheme.error)
+                if (error && frequency.isNotBlank() && due.isBlank() && (oldFrequency != null || oldDay == null || scheduleTouched)) Text(stringResource(R.string.ux_first_date_required), color = MaterialTheme.colorScheme.error)
                 Text(stringResource(R.string.ux_frequency_hint), style = MaterialTheme.typography.bodySmall)
             }
             if (type == ObligationType.CREDIT_CARD) AmountField(cashLimit, { dirty = true; cashLimit = it }, R.string.field_cash_limit, selectedCurrency)
             StaticField(notes, { dirty = true; notes = it.take(500) }, R.string.field_notes)
             Text(stringResource(R.string.preview_bank_zone), style = MaterialTheme.typography.bodySmall)
     }
-    if (error) Text(stringResource(R.string.invalid_fields), color = MaterialTheme.colorScheme.error)
     }
     HorizontalDivider()
+    if (error) Text(stringResource(R.string.invalid_fields), color = MaterialTheme.colorScheme.error)
     if (writeFailed) Text(stringResource(R.string.storage_write_error), color = MaterialTheme.colorScheme.error)
     Button(modifier = Modifier.fillMaxWidth().testTag("save-obligation"), enabled = !busy, onClick = {
         val result = runCatching {
@@ -575,8 +576,10 @@ private fun PreviewEditor(existing: Obligation?, lenders: List<String>, busy: Bo
             val p = parsePreviewMoney(payment, c)
             val annual = parsePreviewRate(rate)?.let { AnnualRate(it) }
             val date = parsePreviewDate(due)
-            val recurrence = frequency.takeIf { it.isNotEmpty() }?.let(PaymentFrequency::valueOf)
-            val rule = if (recurrence == PaymentFrequency.MONTHLY) MonthlyDay(monthlyDay, MissingDayPolicy.valueOf(monthlyPolicy)) else null
+            // Preserve legacy monthly rules without silently requiring an anchor that was never recorded.
+            val legacy = oldFrequency == null && oldDay != null && !scheduleTouched
+            val recurrence = if (legacy) null else frequency.takeIf { it.isNotEmpty() }?.let(PaymentFrequency::valueOf)
+            val rule = if (legacy) oldDay else if (recurrence == PaymentFrequency.MONTHLY) MonthlyDay(monthlyDay, MissingDayPolicy.valueOf(monthlyPolicy)) else null
             if (recurrence != null) require(date != null)
             val terms = when (type) {
                 ObligationType.LOAN -> ((oldTerms as? ObligationTerms.Loan) ?: ObligationTerms.Loan()).copy(annualRate = annual, scheduledPayment = p, firstDueDate = date, paymentDay = rule, paymentFrequency = recurrence)

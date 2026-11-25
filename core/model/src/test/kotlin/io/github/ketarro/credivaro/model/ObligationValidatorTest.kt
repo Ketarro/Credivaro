@@ -17,6 +17,16 @@ class ObligationValidatorTest {
     private fun validate(o: Obligation) = ObligationValidator.validate(o, today)
     private fun rub(n: Long) = Money("RUB", n)
 
+    @Test fun validatesExplicitFrequencyWithoutInventingLegacyDates() {
+        assertTrue(validate(obligation(ObligationTerms.Loan(paymentDay = MonthlyDay(31, MissingDayPolicy.CLAMP)))).isEmpty())
+        assertTrue(ValidationIssue("terms.firstDueDate", ValidationCode.REQUIRED) in
+            validate(obligation(ObligationTerms.Loan(paymentFrequency = PaymentFrequency.WEEKLY))))
+        assertTrue(ValidationIssue("terms.paymentDay", ValidationCode.REQUIRED) in
+            validate(obligation(ObligationTerms.Installment(firstDueDate = today, paymentFrequency = PaymentFrequency.MONTHLY))))
+        assertTrue(validate(obligation(ObligationTerms.Installment(firstDueDate = today,
+            paymentFrequency = PaymentFrequency.MONTHLY, paymentDay = MonthlyDay(31, MissingDayPolicy.SKIP)))).isEmpty())
+        assertTrue(validate(obligation(ObligationTerms.Loan(firstDueDate = today, paymentFrequency = PaymentFrequency.EVERY_TWO_WEEKS))).isEmpty())
+    }
     @Test fun allowsUnknownLoanTerms() {
         assertTrue(validate(obligation(ObligationTerms.Loan())).isEmpty())
     }
