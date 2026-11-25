@@ -3,6 +3,9 @@
 ## [Unreleased] — v0.1.0-alpha
 No published release.
 
+### Build 14 form ergonomics and persistent test signing (versionCode 14)
+- Material calendar fields, bank-day shortcuts and bounds, localized currency labels, safe currency change, exact unallocated preview; calendar unit/UI regression.
+- Owner authorized persistent alpha signing on owner-branch CI after tests; separate signing job and required signed upgrade matrix, final verified artifact only after success. CI pending; no release.
 ### Build 13 UX candidate (versionCode 13)
 - Hybrid dashboard, fast actions, credit filters, detail tabs, compact forms, discard confirmation and append-only correction/cancellation UI; updated UI regressions. CI #65 SUCCESS (28/28 instrumentation); temporary debug APK available, physical acceptance and persistent signing pending. No release or schema changes.
 ### Build 12 diagnostic candidate (versionCode 12)
