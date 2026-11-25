@@ -42,15 +42,27 @@ class StorageTest {
         val day = MonthlyDay(31, MissingDayPolicy.CLAMP)
         val rate = AnnualRate(BigDecimal("12.345"))
         val records = listOf(
-            record(ObligationTerms.Loan(rub(10000), rate, 12, PaymentScheme.ANNUITY, rub(999), today, day)),
+            record(ObligationTerms.Loan(rub(10000), rate, 12, PaymentScheme.ANNUITY, rub(999), today, day, PaymentFrequency.MONTHLY)),
             record(ObligationTerms.CreditCard(rub(5000), rate, day, rub(0), today, rub(300), day,
                 listOf(GraceGroup(UUID.randomUUID(), "Purchase", today, today.plusDays(30), rub(123))))),
-            record(ObligationTerms.Installment(rub(900), rub(100), 4, rub(200), today, rate, rub(0))),
+            record(ObligationTerms.Installment(rub(900), rub(100), 4, rub(200), today, rate, rub(0), PaymentFrequency.MONTHLY, day)),
             record(ObligationTerms.Other("manual")).copy(balance = null)
         )
         EncryptedStorage.open(context, name, clock).use { store -> records.forEach { store.repository.save(it) } }
         EncryptedStorage.open(context, name, clock).use { store ->
             assertEquals(records.toSet(), store.repository.observeAll().first().toSet())
+        }
+    }
+
+    @Test fun frequencyPayloadAndLegacyCompatibility() = runBlocking {
+        val old = TermsCodec.decode("LOAN", """{"v":1,"paymentDay":{"day":31,"policy":"CLAMP"}}""", "RUB") as ObligationTerms.Loan
+        assertNull(old.paymentFrequency)
+        assertEquals(MonthlyDay(31, MissingDayPolicy.CLAMP), old.paymentDay)
+        for (frequency in PaymentFrequency.entries) {
+            val original = record(ObligationTerms.Loan(firstDueDate = today, paymentFrequency = frequency,
+                paymentDay = if (frequency == PaymentFrequency.MONTHLY) MonthlyDay(31, MissingDayPolicy.SKIP) else null))
+            EncryptedStorage.open(context, name, clock).use { it.repository.save(original) }
+            EncryptedStorage.open(context, name, clock).use { assertEquals(original, it.repository.find(original.id)) }
         }
     }
 

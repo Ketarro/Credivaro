@@ -8,6 +8,7 @@ import java.util.UUID
 
 enum class ObligationStatus { ACTIVE, CLOSED, ARCHIVED }
 enum class ObligationType { LOAN, CREDIT_CARD, INSTALLMENT, OTHER }
+enum class PaymentFrequency { ONE_TIME, WEEKLY, EVERY_TWO_WEEKS, MONTHLY }
 enum class PaymentScheme { ANNUITY, DIFFERENTIATED, CUSTOM }
 enum class MissingDayPolicy { CLAMP, SKIP }
 
@@ -32,7 +33,8 @@ sealed interface ObligationTerms {
         val paymentScheme: PaymentScheme? = null,
         val scheduledPayment: Money? = null,
         val firstDueDate: LocalDate? = null,
-        val paymentDay: MonthlyDay? = null
+        val paymentDay: MonthlyDay? = null,
+        val paymentFrequency: PaymentFrequency? = null
     ) : ObligationTerms {
         override val type = ObligationType.LOAN
     }
@@ -57,7 +59,9 @@ sealed interface ObligationTerms {
         val installmentAmount: Money? = null,
         val firstDueDate: LocalDate? = null,
         val annualRate: AnnualRate? = null,
-        val fees: Money? = null
+        val fees: Money? = null,
+        val paymentFrequency: PaymentFrequency? = null,
+        val paymentDay: MonthlyDay? = null
     ) : ObligationTerms {
         override val type = ObligationType.INSTALLMENT
     }

@@ -179,10 +179,11 @@ private fun AlphaScreen(
     }
     val colors = MaterialTheme.colorScheme
     val keyboardVisible = WindowInsets.ime.getBottom(LocalDensity.current) > 0
+    val editorOpen = obligations && (route == "new" || route.startsWith("edit:"))
     Scaffold(
         containerColor = colors.background,
         bottomBar = {
-            if (!keyboardVisible && !(obligations && (route == "new" || route.startsWith("edit:")))) CredivaroBottomBar(
+            if (!keyboardVisible && !editorOpen) CredivaroBottomBar(
                 settingsSelected = settings,
                 obligationsSelected = obligations,
                 onHome = { settings = false; about = false; obligations = false },
@@ -193,7 +194,7 @@ private fun AlphaScreen(
     ) { padding ->
         Box(Modifier.fillMaxSize().padding(padding).consumeWindowInsets(padding).imePadding(), contentAlignment = Alignment.TopCenter) {
             Column(
-                Modifier.widthIn(max = 640.dp).fillMaxWidth().verticalScroll(screenScroll).padding(horizontal = 16.dp, vertical = 16.dp),
+                Modifier.widthIn(max = 640.dp).fillMaxWidth().then(if (editorOpen) Modifier.fillMaxHeight() else Modifier.verticalScroll(screenScroll)).padding(horizontal = 16.dp, vertical = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 if (about) {

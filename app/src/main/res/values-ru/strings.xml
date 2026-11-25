@@ -186,4 +186,22 @@
     <string name="ux_yesterday">Вчера</string>
     <string name="ux_change_currency">Сменить валюту</string>
     <string name="ux_currency_reset_hint">Введённые денежные суммы будут очищены. Пересчёта в другую валюту не будет.</string>
+    <string name="ux_required">Обязательное поле</string>
+    <string name="ux_invalid_amount">Проверьте сумму: без минуса, допустимые дробные знаки и размер.</string>
+    <string name="ux_invalid_rate">Укажите неотрицательную ставку.</string>
+    <string name="ux_saved_lenders">Выбрать ранее введённый банк</string>
+    <string name="ux_frequency">Периодичность платежей</string>
+    <string name="ux_once">Разовый платёж</string>
+    <string name="ux_weekly">Еженедельно</string>
+    <string name="ux_biweekly">Каждые две недели</string>
+    <string name="ux_monthly">Ежемесячно</string>
+    <string name="ux_month_day">День месяца</string>
+    <string name="ux_choose_day">Выбрать день</string>
+    <string name="ux_short_month">Если такого дня в месяце нет</string>
+    <string name="ux_clamp">В последний день месяца</string>
+    <string name="ux_skip">Пропустить этот месяц</string>
+    <string name="ux_month_rule_required">Выберите день и правило для коротких месяцев.</string>
+    <string name="ux_first_date_required">Выберите первую известную дату платежа.</string>
+    <string name="ux_frequency_hint">Условия сохраняются. События календаря и напоминания пока не создаются.</string>
+    <string name="ux_allocation_exceeds">Распределение превышает сумму платежа.</string>
 </resources>

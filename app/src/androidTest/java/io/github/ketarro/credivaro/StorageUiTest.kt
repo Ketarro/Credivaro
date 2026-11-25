@@ -30,7 +30,7 @@ class StorageUiTest {
         rule.onNodeWithText(label(R.string.form_additional)).performScrollTo().activate()
         rule.onNodeWithTag("due-date").performScrollTo().activate()
         rule.onNodeWithTag("due-date-dismiss").activate()
-        rule.onNodeWithTag("save-obligation").performScrollTo().activate()
+        rule.onNodeWithTag("save-obligation").activate()
         waitFor(title)
         waitFor(label(R.string.ux_actions))
         waitFor(label(R.string.home))

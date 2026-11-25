@@ -22,7 +22,7 @@ internal object TermsCodec {
                 money("originalPrincipal", value.originalPrincipal); rate(value.annualRate)
                 put("termMonths", value.termMonths); put("scheme", value.paymentScheme?.name)
                 money("payment", value.scheduledPayment); date("due", value.firstDueDate)
-                day("paymentDay", value.paymentDay)
+                day("paymentDay", value.paymentDay); put("frequency", value.paymentFrequency?.name)
             }
             is ObligationTerms.CreditCard -> {
                 money("limit", value.creditLimit); rate(value.annualRate)
@@ -41,6 +41,7 @@ internal object TermsCodec {
                 money("original", value.originalAmount); money("down", value.downPayment)
                 put("count", value.installmentCount); money("payment", value.installmentAmount)
                 date("due", value.firstDueDate); rate(value.annualRate); money("fees", value.fees)
+                put("frequency", value.paymentFrequency?.name); day("paymentDay", value.paymentDay)
             }
             is ObligationTerms.Other -> put("description", value.description)
         }
@@ -60,7 +61,7 @@ internal object TermsCodec {
         return when (ObligationType.valueOf(type)) {
             ObligationType.LOAN -> ObligationTerms.Loan(
                 j.money("originalPrincipal"), rate(), integer("termMonths"),
-                j.string("scheme")?.let(PaymentScheme::valueOf), j.money("payment"), j.date("due"), day("paymentDay"))
+                j.string("scheme")?.let(PaymentScheme::valueOf), j.money("payment"), j.date("due"), day("paymentDay"), j.string("frequency")?.let(PaymentFrequency::valueOf))
             ObligationType.CREDIT_CARD -> ObligationTerms.CreditCard(
                 j.money("limit"), rate(), day("statementDay"), j.money("minimum"), j.date("due"),
                 j.money("cashLimit"), day("cashResetDay"), j.getJSONArray("grace").let { array ->
@@ -71,7 +72,7 @@ internal object TermsCodec {
                 })
             ObligationType.INSTALLMENT -> ObligationTerms.Installment(
                 j.money("original"), j.money("down"), integer("count"), j.money("payment"),
-                j.date("due"), rate(), j.money("fees"))
+                j.date("due"), rate(), j.money("fees"), j.string("frequency")?.let(PaymentFrequency::valueOf), day("paymentDay"))
             ObligationType.OTHER -> ObligationTerms.Other(j.string("description"))
         }
     }

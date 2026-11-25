@@ -31,7 +31,7 @@ class PaymentUiTest {
         rule.onNodeWithText(label(R.string.add_obligation)).activate()
         rule.onNodeWithTag("field-${R.string.field_title}").performScrollTo()
             .performSemanticsAction(SemanticsActions.SetText) { check(it(AnnotatedString(title))) }
-        rule.onNodeWithTag("save-obligation").performScrollTo().activate()
+        rule.onNodeWithTag("save-obligation").activate()
         waitText(label(R.string.ux_actions))
         rule.onNodeWithTag("credit-tab-payments").performScrollTo().activate()
         waitText(label(R.string.payment_empty))

@@ -186,4 +186,22 @@
     <string name="ux_yesterday">Yesterday</string>
     <string name="ux_change_currency">Change currency</string>
     <string name="ux_currency_reset_hint">Entered money amounts will be cleared. They will not be converted to another currency.</string>
+    <string name="ux_required">Required field</string>
+    <string name="ux_invalid_amount">Check amount: non-negative, valid currency precision and range.</string>
+    <string name="ux_invalid_rate">Enter a non-negative rate.</string>
+    <string name="ux_saved_lenders">Choose previously entered bank</string>
+    <string name="ux_frequency">Payment frequency</string>
+    <string name="ux_once">One time</string>
+    <string name="ux_weekly">Weekly</string>
+    <string name="ux_biweekly">Every two weeks</string>
+    <string name="ux_monthly">Monthly</string>
+    <string name="ux_month_day">Day of month</string>
+    <string name="ux_choose_day">Choose day</string>
+    <string name="ux_short_month">If this day is absent in a month</string>
+    <string name="ux_clamp">Use last day of month</string>
+    <string name="ux_skip">Skip this month</string>
+    <string name="ux_month_rule_required">Select day and short-month rule.</string>
+    <string name="ux_first_date_required">Choose the first known payment date.</string>
+    <string name="ux_frequency_hint">Saved terms only. Calendar events and reminders are not generated yet.</string>
+    <string name="ux_allocation_exceeds">Allocation exceeds payment amount.</string>
 </resources>

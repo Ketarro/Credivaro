@@ -134,7 +134,8 @@ internal fun PaymentEntryDialog(obligation: Obligation, repository: PaymentRepos
                 verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(stringResource(R.string.payment_fact_hint))
                 Text(obligation.title + " · " + obligation.currency.currencyCode, style = MaterialTheme.typography.titleMedium)
-                PaymentInput(amount, { amount = it.take(32) }, R.string.payment_amount, "payment-amount", editable, true)
+                PaymentInput(amount, { amount = it.take(32) }, R.string.payment_amount, "payment-amount", editable, true,
+                    error = (invalid || amount.isNotBlank()) && invalidAmount(amount, obligation.currency, required = true), currency = obligation.currency.currencyCode)
                 val today = LocalDate.now(obligation.bankZone)
                 CalendarField(date, { date = it }, R.string.payment_date, "payment-date", today,
                     min = obligation.openedOn, max = today, enabled = editable, shortcuts = true)
@@ -143,13 +144,25 @@ internal fun PaymentEntryDialog(obligation: Obligation, repository: PaymentRepos
                 }
                 if (advanced) {
                 Text(stringResource(R.string.payment_allocation_hint), style = MaterialTheme.typography.bodySmall)
-                PaymentInput(principal, { principal = it.take(32) }, R.string.payment_principal, "payment-principal", editable, true)
-                PaymentInput(interest, { interest = it.take(32) }, R.string.payment_interest, "payment-interest", editable, true)
-                PaymentInput(fees, { fees = it.take(32) }, R.string.payment_fees, "payment-fees", editable, true)
+                PaymentInput(principal, { principal = it.take(32) }, R.string.payment_principal, "payment-principal", editable, true,
+                    error = invalidAmount(principal, obligation.currency), currency = obligation.currency.currencyCode)
+                PaymentInput(interest, { interest = it.take(32) }, R.string.payment_interest, "payment-interest", editable, true,
+                    error = invalidAmount(interest, obligation.currency), currency = obligation.currency.currencyCode)
+                PaymentInput(fees, { fees = it.take(32) }, R.string.payment_fees, "payment-fees", editable, true,
+                    error = invalidAmount(fees, obligation.currency), currency = obligation.currency.currencyCode)
                 PaymentInput(notes, { notes = it.take(500) }, R.string.field_notes, "payment-notes", editable)
                 val remainder = runCatching {
                     buildPayment(obligation, UUID.randomUUID(), UUID.randomUUID(), date, amount, principal, interest, fees, notes, today).allocation.unallocated
                 }.getOrNull()
+                if (remainder == null && amount.isNotBlank() && !invalidAmount(amount, obligation.currency, true) &&
+                    listOf(principal, interest, fees).none { invalidAmount(it, obligation.currency) }) {
+                    val tooMuch = runCatching {
+                        val zero = Money(obligation.currency.currencyCode, 0)
+                        val allocated = listOf(principal, interest, fees).map { parsePreviewMoney(it, obligation.currency) ?: zero }.reduce { a, b -> a + b }
+                        allocated.minorUnits > requireNotNull(parsePreviewMoney(amount, obligation.currency)).minorUnits
+                    }.getOrDefault(true)
+                    if (tooMuch) Text(stringResource(R.string.ux_allocation_exceeds), color = MaterialTheme.colorScheme.error)
+                }
                 if (remainder != null) Text(stringResource(R.string.payment_unallocated) + ": " + paymentMoney(remainder),
                     style = MaterialTheme.typography.titleSmall, modifier = Modifier.testTag("payment-remainder"))
                 }
@@ -245,8 +258,11 @@ private fun PaymentCancelDialog(obligation: Obligation, repository: PaymentRepos
 
 @Composable
 private fun PaymentInput(value: String, update: (String) -> Unit, label: Int, tag: String,
-    enabled: Boolean, decimal: Boolean = false) {
+    enabled: Boolean, decimal: Boolean = false, error: Boolean = false, currency: String? = null) {
     OutlinedTextField(value, update, modifier = Modifier.fillMaxWidth().testTag(tag),
         label = { Text(stringResource(label)) }, enabled = enabled, singleLine = true,
+        isError = error, supportingText = if (error) ({ Text(stringResource(R.string.ux_invalid_amount)) }) else null,
+        suffix = if (currency != null) ({ Text(currency) }) else null,
+        visualTransformation = if (decimal) GroupedDecimal else androidx.compose.ui.text.input.VisualTransformation.None,
         keyboardOptions = KeyboardOptions(keyboardType = if (decimal) KeyboardType.Decimal else KeyboardType.Text))
 }
