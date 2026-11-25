@@ -3,6 +3,8 @@
 ## [Unreleased] — v0.1.0-alpha
 No published release.
 
+### Build 13 UX candidate (versionCode 13)
+- Hybrid dashboard, fast actions, credit filters, detail tabs, compact forms, discard confirmation and append-only correction/cancellation UI; updated UI regressions. CI pending; no release or schema changes.
 ### Build 12 diagnostic candidate (versionCode 12)
 - Payment model, exact allocation, idempotent encrypted storage, additive Room v1→2→3, RU/EN payment entry/history.
 - API26 IME/navigation regression fixed (#54→#55). Append-only correction repository; schema exports verified, CI #57 green. Correction UI, signed upgrade, recovery/review and manual acceptance pending.
