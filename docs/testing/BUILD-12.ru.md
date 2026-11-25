@@ -37,3 +37,7 @@ CI #56 (45515399942, e46dbd4): Gradle compilation/JVM/lint/ROADMAP PASS, API26/A
 
 ## CI #57 и самостоятельная документация
 [Run #57](https://github.com/Ketarro/Credivaro/actions/runs/45516514318), SHA 8af6c0583ecece2f0fd2c7310637ae8aa02434bb: SUCCESS; debug и API26/36 PASS, compatibility/signing skipped. Схема v3 принята CI. 26/26 относится к #56, подробный счёт #57 отдельно не извлекался. UI коррекции, recovery/review, signed upgrade и ручная приёмка открыты. 17/68. Код, схемы, подпись и CI не менялись.
+
+## Диагностическая сборка
+Build 12 diagnostic candidate (R03.05–08/R04.01–04/R09.07): по запросу владельца versionCode 12, расширена одна кнопка самопроверки до 26 сценариев (10 FIN, 8 DB, 5 PAY, 3 MIG). Синтетические изолированные базы и ключи, 1000 генераций внутри FIN10, повтор/конкуренция, коррекции, fixture v1/v2→v3, DDL rollback/retry, отсутствие envelope/alias; отчёт с моделью/API/ABI/page size и статусами. Не считать ещё пройденными: CI pending; UI коррекции не добавлен, disk-full/kill/recovery/review и реальный signed upgrade открыты. [Ручной чек-лист](docs/testing/BUILD-12-MANUAL.ru.md) 44 сценария; физическая проверка по отдельному допуску. Не распространять непроверенный APK; 17/68.
+Build metadata: artifact name Build 12, compatibility baseline exact signed Build 11 CI #49 (45426076933); signing trust, secret handling, schema guard and triggers unchanged. PR never signs. Detailed checks not yet run; no release.

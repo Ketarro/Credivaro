@@ -3,9 +3,10 @@
 ## [Unreleased] — v0.1.0-alpha
 No published release.
 
-### Build 12 candidate (versionCode 11)
+### Build 12 diagnostic candidate (versionCode 12)
 - Payment model, exact allocation, idempotent encrypted storage, additive Room v1→2→3, RU/EN payment entry/history.
 - API26 IME/navigation regression fixed (#54→#55). Append-only correction repository; schema exports verified, CI #57 green. Correction UI, signed upgrade, recovery/review and manual acceptance pending.
+- 26 one-button synthetic diagnostics, device report, 44-case manual checklist; CI pending.
 ### Build 11 stage 1
 - Debug self-check 10 cases; CI #49/#50 green, physical self-check 10/10, manual acceptance deferred.
 ### Build 10

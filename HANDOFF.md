@@ -4,8 +4,10 @@
 
 ## Актуальная точка продолжения (приоритет над историческими записями)
 - Рабочая ветка feat/build12-payment-core, [PR #9](https://github.com/Ketarro/Credivaro/pull/9) draft; база feat/android-alpha-bootstrap / PR #5. Проверять HEAD. Последний проверенный кандидат 8af6c0583ecece2f0fd2c7310637ae8aa02434bb, [CI #57](https://github.com/Ketarro/Credivaro/actions/runs/45516514318) SUCCESS, debug/API26/API36 PASS; compatibility/signing skipped. versionCode 11, подписанного Build 12 нет.
-- Следующий шаг [R04.04](docs/checkpoints/R04.04.md): UI отмены/корректировки и видимые статусы полной истории. R03.05 отложен, R03.06/R04.01–04 частично выполнены, все открыты. [Отчёт](docs/testing/BUILD-12.ru.md), [CHANGELOG](CHANGELOG.md).
+- Текущая задача [TEST-B12-001](docs/checkpoints/TEST-B12-001.md): диагностическая сборка versionCode 12, CI ожидается, 26 self-check, [полный ручной чек-лист](docs/testing/BUILD-12-MANUAL.ru.md). R04.04 UI после диагностического этапа.
 - Реальные данные запрещены; до распространения recovery, независимый review, signed upgrade и отдельное согласие. Не менять main/merge/release без разрешения. [Принятые решения](docs/checkpoints/R01.06.md).
+
+Build 12 diagnostic candidate (R03.05–08/R04.01–04/R09.07): по запросу владельца versionCode 12, расширена одна кнопка самопроверки до 26 сценариев (10 FIN, 8 DB, 5 PAY, 3 MIG). Синтетические изолированные базы и ключи, 1000 генераций внутри FIN10, повтор/конкуренция, коррекции, fixture v1/v2→v3, DDL rollback/retry, отсутствие envelope/alias; отчёт с моделью/API/ABI/page size и статусами. Не считать ещё пройденными: CI pending; UI коррекции не добавлен, disk-full/kill/recovery/review и реальный signed upgrade открыты. [Ручной чек-лист](docs/testing/BUILD-12-MANUAL.ru.md) 44 сценария; физическая проверка по отдельному допуску. Не распространять непроверенный APK; 17/68.
 
 ## Build 12 — история подготовки
 Build 12 — подготовительный этап R04.01 в отдельной ветке `feat/build12-payment-core`: по поручению владельца ручная проверка Build 11 отложена, R03.05 не закрыт. Добавлены доменные типы платежа и распределения, 11 сценариев локального JVM smoke (PASS); JUnit/Android CI не запускались. Room v1, UI, versionCode, подпись и CI без изменений. APK Build 12 ещё не создан. Платёжная персистентность и миграция требуют отдельного безопасного допуска и тестов; никаких действий с реальными данными. 17/68 (25.0%).
@@ -29,7 +31,7 @@ CI #56 (45515399942, e46dbd4): Gradle compilation/JVM/lint/ROADMAP PASS, API26/A
 ## 0. Обязательная дорожная карта
 - [ROADMAP.md](ROADMAP.md) — единый план выпуска v0.1.0-alpha, обязательное чтение до работы; [AGENTS.md](AGENTS.md) — правила.
 - Прогресс ROADMAP: **17/68 (25.0%)**.
-- Активный пункт [R04.04](docs/checkpoints/R04.04.md); R03.05 отложен, R03.07/R09.03/#8 открыты.
+- Активный пункт TEST-B12-001 / R09.07; R03.05/R03.06/R04.01–04 остаются открытыми.
 - После каждого существенного изменения/теста синхронизировать ROADMAP и HANDOFF, чекбоксы/доказательства/прогресс, проверить `python3 scripts/check-roadmap.py`. Не закрывать неподтверждённые пункты. 100% обязательных пунктов — условие публикации первого alpha v0.1.0-alpha после финального подтверждения владельца. До этого только тестовые APK; не менять main и не объединять PR без разрешения.
 - Схема v1 проверена push [CI #33](https://github.com/Ketarro/Credivaro/actions/runs/45401601140); [PR CI #34](https://github.com/Ketarro/Credivaro/actions/runs/45401613445) красный из-за StorageUiTest на API 26 (Failed to inject touch input). Не считать всю проверку зелёной; зафиксировано в R09.03.
 
