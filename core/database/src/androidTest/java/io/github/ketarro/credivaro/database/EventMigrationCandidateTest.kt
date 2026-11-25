@@ -6,7 +6,6 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import io.github.ketarro.credivaro.model.*
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.flow.first
 import org.junit.Assert.*
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -29,17 +28,19 @@ class EventMigrationCandidateTest {
         val payment = RecordedPayment(UUID.randomUUID(), UUID.randomUUID(), owner, date, Money("RUB", 100))
         val password = DatabaseKey.loadOrCreate(context, name)
         try {
-            EncryptedStorage.build(context, name, password).use { old ->
+            val old = EncryptedStorage.build(context, name, password)
+            try {
                 ObligationRepository(old, clock).save(obligation)
                 PaymentRepository(old, clock).record(payment)
                 assertEquals(3, old.openHelper.writableDatabase.version)
-            }
+            } finally { old.close() }
             fun open() = Room.databaseBuilder(context, EventMigrationCandidateDatabase::class.java, name)
                 .openHelperFactory(PreserveFileFactory(password))
                 .addMigrations(EVENT_MIGRATION_CANDIDATE_3_4)
                 .setJournalMode(androidx.room.RoomDatabase.JournalMode.TRUNCATE).build()
             repeat(2) {
-                open().use { candidate ->
+                val candidate = open()
+                try {
                     val db = candidate.openHelper.writableDatabase
                     assertEquals(4, db.version)
                     assertEquals("Synthetic v3", candidate.dao().find(owner.toString())?.row?.title)
@@ -56,7 +57,7 @@ class EventMigrationCandidateTest {
                     store.reconcile(owner, window)
                     store.linkPayment(OccurrenceKey(rule.seriesId,"once").id, payment.id)
                     db.query("SELECT COUNT(*) FROM event_payment_link").use { assertTrue(it.moveToFirst()); assertEquals(1,it.getInt(0)) }
-                }
+                } finally { candidate.close() }
             }
         } finally {
             password.fill(0)
