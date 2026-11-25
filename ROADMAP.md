@@ -1,9 +1,15 @@
 # Credivaro — дорожная карта первого выпуска v0.1.0-alpha
 
-Актуально: 2026-11-25. Build16 — feat/build16-event-engine, versionCode 16; Build15 и Build14 сохранены отдельно. CI/signing Build16 ожидается; Build15 #70 и Build14 #68 проверяются отдельно.
+Актуально: 2026-11-25. Build16 — feat/build16-event-engine, versionCode 16; Build15 и Build14 сохранены отдельно. CI/signing Build16 SUCCESS; Build17 preparation on separate branch.
 
 ## Объём выпуска
 Согласованный владельцем объём: обязательства, защищённое хранение, платежи, сверка, календарь, напоминания, настройки, базовая сводка/аналитика и контроль качества. Полные прогнозы, сравнительные стратегии (лавина, снежный ком и др.), защищённый переносимый backup/export/import, интеграции банков, AI-импорт и облако — отдельный backlog после 0.1.0-alpha; включать только по согласованному расширению карты. Базовая аналитика R07 — ограниченное дополнение к MVP, не полноценные стратегии. Владелец может изменять приоритеты и объём; нельзя переносить обязательные условия безопасности без явного решения.
+
+## Следующая версия — исследование (вне alpha)
+По решению владельца 2026-11-25: исследовать доступность официальных API банков для кредитных данных физлиц, условия доступа, разрешения и тестовые среды. Реализация только после подтверждения доступности и отдельного согласования; текущий объём alpha и 68 обязательных задач не меняются.
+
+## Build 17 — подготовка хранения событий
+2026-11-25: Build 16 baseline c5aaad22 — CI [push](https://github.com/Ketarro/Credivaro/actions/runs/45536421242) SUCCESS, debug/storage API26/36, persistent signing, compatibility/upgrade API26/28/29/30/36, final signed artifact 14987124149. Physical acceptance, independent review and populated recovery remain open. Build 17 preparation: feat/build17-event-storage, R05.03, additive candidate DDL and isolated encrypted fixture test; NOT wired to Room, versionCode remains 16, no new APK authorized. Next: typed codec/DAO, transactional reconciliation and link validation, actual v3 fixture and compiler-exported v4 schema, migration/recovery evidence and independent review. No checklist closure.
 
 ## Подготовка Build 12 (отдельная ветка)
 Build 12 — подготовительный этап R04.01 в отдельной ветке `feat/build12-payment-core`: по поручению владельца ручная проверка Build 11 отложена, R03.05 не закрыт. Добавлены доменные типы платежа и распределения, 11 сценариев локального JVM smoke (PASS); JUnit/Android CI не запускались. Room v1, UI, versionCode, подпись и CI без изменений. APK Build 12 ещё не создан. Платёжная персистентность и миграция требуют отдельного безопасного допуска и тестов; никаких действий с реальными данными. 17/68 (25.0%).
