@@ -3,6 +3,8 @@
 ## [Unreleased] — v0.1.0-alpha
 No published release.
 
+### Build 16 event engine (versionCode 16)
+- Pure deterministic recurrence, versioned nominal slots, manual overrides, bounded bank-date generation and non-mutating reconciliation plan. Map known payment terms without invented dates; all eight event types and monetary roles. 24 JUnit methods and six CAL self-checks (32 total). CI pending; no event storage, calendar UI, reminders or release.
 ### Build 15 forms (versionCode 15)
 - Local lender picker, exact display grouping, inline errors, persistent form footer, saved explicit payment frequency/day policy for loans/installments; validation, legacy codec, encrypted roundtrip and UI tests. CI pending; events/reminders not generated, no release.
 ### Build 14 form ergonomics and persistent test signing (versionCode 14)
