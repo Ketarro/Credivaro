@@ -18,3 +18,5 @@ No published release.
 - Android preview, RU/EN, themes, Signal Frame; owner 21/21; initial project brief, roadmap, guidance, security policy and Russian/English descriptions.
 ### Documentation 2026-11-25
 - Standalone rules, roadmap, handoff, task checkpoints, testing and change history. No source, schema, signing or CI change; no release.
+
+- UX research and three proposed navigation concepts recorded in R09.06; no application changes or release.
