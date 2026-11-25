@@ -71,11 +71,11 @@ class StorageUiTest {
         rule.onNodeWithTag("home-add").performScrollTo().activate()
         rule.onNodeWithTag("field-${R.string.field_title}").performScrollTo()
             .performSemanticsAction(SemanticsActions.SetText) { check(it(AnnotatedString(title))) }
-        rule.onNodeWithContentDescription(label(R.string.back)).performScrollTo().activate()
+        rule.onNodeWithContentDescription(label(R.string.back)).assertIsDisplayed().activate()
         waitFor(label(R.string.ux_discard_title))
         rule.onNodeWithText(label(R.string.ux_keep_editing)).activate()
         rule.onNodeWithTag("field-${R.string.field_title}").assertTextContains(title)
-        rule.onNodeWithContentDescription(label(R.string.back)).performScrollTo().activate()
+        rule.onNodeWithContentDescription(label(R.string.back)).assertIsDisplayed().activate()
         rule.onNodeWithText(label(R.string.ux_discard)).activate()
         rule.waitUntil(30000) { rule.onAllNodesWithTag("list-add").fetchSemanticsNodes().isNotEmpty() }
         rule.onAllNodesWithText(title).assertCountEquals(0)

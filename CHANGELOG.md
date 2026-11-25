@@ -3,6 +3,8 @@
 ## [Unreleased] — v0.1.0-alpha
 No published release.
 
+- CI #70: repair stale scroll action on fixed Back button in discard test; assertions preserved.
+
 ### Build 16 event engine (versionCode 16)
 - Pure deterministic recurrence, versioned nominal slots, manual overrides, bounded bank-date generation and non-mutating reconciliation plan. Map known payment terms without invented dates; all eight event types and monetary roles. 24 JUnit methods and six CAL self-checks (32 total). CI pending; no event storage, calendar UI, reminders or release.
 ### Build 15 forms (versionCode 15)
