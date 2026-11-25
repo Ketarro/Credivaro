@@ -25,14 +25,33 @@ internal data class PaymentRow(
 
 @Dao
 internal interface PaymentDao {
-    @Query("SELECT * FROM payment WHERE obligationId=:id ORDER BY bankDate DESC, recordedAt DESC, id")
+    @Query("""SELECT p.* FROM payment p WHERE p.obligationId=:id
+        AND NOT EXISTS (SELECT 1 FROM payment_correction c WHERE c.targetPaymentId=p.id)
+        ORDER BY p.bankDate DESC, p.recordedAt DESC, p.id""")
     fun observeFor(id: String): Flow<List<PaymentRow>>
 
     @Query("SELECT * FROM payment WHERE operationId=:id")
     suspend fun findOperation(id: String): PaymentRow?
 
+    @Query("SELECT * FROM payment WHERE id=:id")
+    suspend fun findPayment(id: String): PaymentRow?
+
+    @Query("SELECT * FROM payment_correction WHERE operationId=:id")
+    suspend fun findCorrectionOperation(id: String): PaymentCorrectionRow?
+
+    @Query("SELECT * FROM payment_correction WHERE targetPaymentId=:id")
+    suspend fun findCorrectionTarget(id: String): PaymentCorrectionRow?
+
+    @Query("""SELECT p.*, c.operationId AS correctionId, c.reason AS correctionReason, c.replacementId
+        FROM payment p LEFT JOIN payment_correction c ON c.targetPaymentId=p.id
+        WHERE p.obligationId=:id ORDER BY p.bankDate DESC, p.recordedAt DESC, p.id""")
+    fun observeHistory(id: String): Flow<List<PaymentHistoryRow>>
+
     @Insert(onConflict = OnConflictStrategy.ABORT)
     suspend fun insert(row: PaymentRow)
+
+    @Insert(onConflict = OnConflictStrategy.ABORT)
+    suspend fun insertCorrection(row: PaymentCorrectionRow)
 }
 
 /** Additive migration: existing obligations, snapshots and key material are untouched. */
@@ -54,11 +73,55 @@ class PaymentRepository internal constructor(private val db: StorageDatabase, pr
         dao.observeFor(obligationId.toString()).map { rows -> rows.map { it.toDomain() } }
 
     suspend fun record(value: RecordedPayment): PaymentRecordResult = db.withTransaction {
+        require(dao.findCorrectionOperation(value.operationId.toString()) == null) { "Operation ID used for correction" }
         val existing = dao.findOperation(value.operationId.toString())
         if (existing != null) {
             require(existing.toDomain() == value) { "Operation ID already used for a different payment" }
             return@withTransaction PaymentRecordResult.ALREADY_RECORDED
         }
+        insertNew(value)
+        PaymentRecordResult.INSERTED
+    }
+
+    fun observeHistoryFor(obligationId: UUID): Flow<List<PaymentHistoryItem>> =
+        dao.observeHistory(obligationId.toString()).map { rows ->
+            rows.map { row ->
+                val status = when {
+                    row.correctionId == null -> PaymentHistoryStatus.ACTIVE
+                    row.replacementId == null -> PaymentHistoryStatus.CANCELLED
+                    else -> PaymentHistoryStatus.REPLACED
+                }
+                PaymentHistoryItem(row.payment.toDomain(), status, row.correctionReason,
+                    row.replacementId?.let(UUID::fromString))
+            }
+        }
+
+    /** The correction and optional new fact commit together, or neither is written. */
+    suspend fun correct(value: PaymentCorrection): PaymentRecordResult = db.withTransaction {
+        val operation = value.operationId.toString()
+        val target = requireNotNull(dao.findPayment(value.targetPaymentId.toString())) { "Unknown payment" }
+        require(target.obligationId == value.obligationId.toString()) { "Obligation mismatch" }
+        val existing = dao.findCorrectionOperation(operation)
+        if (existing != null) {
+            val replacement = existing.replacementId?.let { checkNotNull(dao.findPayment(it)).toDomain() }
+            require(existing.targetPaymentId == target.id && existing.reason == value.reason &&
+                replacement == value.replacement) { "Conflicting correction replay" }
+            return@withTransaction PaymentRecordResult.ALREADY_RECORDED
+        }
+        require(dao.findOperation(operation) == null) { "Operation ID used for payment" }
+        require(dao.findCorrectionTarget(target.id) == null) { "Payment already corrected" }
+        value.replacement?.let {
+            require(dao.findOperation(it.operationId.toString()) == null &&
+                dao.findCorrectionOperation(it.operationId.toString()) == null) { "Replacement operation already exists" }
+            require(dao.findPayment(it.id.toString()) == null) { "Replacement payment already exists" }
+            insertNew(it)
+        }
+        dao.insertCorrection(PaymentCorrectionRow(target.id, operation,
+            value.replacement?.id?.toString(), value.reason, clock.millis()))
+        PaymentRecordResult.INSERTED
+    }
+
+    private suspend fun insertNew(value: RecordedPayment) {
         val owner = requireNotNull(db.dao().find(value.obligationId.toString())) { "Unknown obligation" }.row
         val currency = Currency.getInstance(owner.currency)
         require(currency.defaultFractionDigits == owner.scale && owner.scale in 0..3) { "Invalid stored currency scale" }
@@ -74,7 +137,6 @@ class PaymentRepository internal constructor(private val db: StorageDatabase, pr
             value.bankDate.toString(), owner.currency, owner.scale, value.amount.minorUnits,
             a.principal.minorUnits, a.interest.minorUnits, a.fees.minorUnits,
             a.unallocated.minorUnits, value.notes, clock.millis()))
-        PaymentRecordResult.INSERTED
     }
 
     private fun PaymentRow.toDomain(): RecordedPayment {

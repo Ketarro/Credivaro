@@ -20,6 +20,8 @@ Build 12 UI candidate (R04.02/R04.03): журнал фактических пл�
 
 CI #54 (45485443922, e968bf9): debug compile/JVM/lint/schema PASS, API36 PASS; API26 7 storage tests PASS, 2/4 app UI PASS. PaymentUiTest: Home node absent after saving payment; StorageUiTest: timeout 30s, exact wait not identified in log. Likely IME transition and conditional dashboard Add (leftover synthetic fixture), not proven root causes. Candidate fix: clear focus/hide IME on valid payment save and cancel, wait for navigation after dialog dismissal, start both UI tests through obligations nav without assuming empty DB. All original assertions and 30s limits retained. Re-run required; R09.03 open. 17/68, no signed APK.
 
+CI #55 (45489811714, 8f1c179): SUCCESS, debug compilation/JVM/lint/schema/ROADMAP PASS; API26/36 each 7 storage + 4 app, total 22/22. Compatibility and persistent signing skipped in PR. R09.03 remains open pending full matrix. Next candidate R04.04: append-only correction/cancellation model, transactional repository, active-only query plus full history query, additive Room migration 2→3 retaining v1/v2, 2 additional encrypted instrumentation tests. UI actions/status not yet wired. New v3 export must be captured from compiler; schema guard expected to fail until checked in, never disable it. CI pending. No real DB migration, signed APK, version bump, or merge. 17/68.
+
 ## Прогресс
 Обязательные пункты: **17/68 (25.0%)**.
 Завершённые этапы: **0/10**.

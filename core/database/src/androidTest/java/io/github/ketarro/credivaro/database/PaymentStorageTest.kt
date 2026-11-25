@@ -62,6 +62,70 @@ class PaymentStorageTest {
         }
     }
 
+    @Test fun correctionHistoryReplayAndReopen() = runBlocking {
+        val o = Obligation(id, "Synthetic", currency = Currency.getInstance("RUB"),
+            bankZone = ZoneOffset.UTC, terms = ObligationTerms.Other(), balance = BalanceSnapshot(today, rub(500)))
+        val original = payment()
+        val replacement = payment().copy(amount = rub(90), allocation = PaymentAllocation.unknown(rub(90)))
+        val change = PaymentCorrection(UUID.randomUUID(), id, original.id, "Synthetic correction", replacement)
+        val cancel = PaymentCorrection(UUID.randomUUID(), id, replacement.id, "Synthetic cancellation")
+        EncryptedStorage.open(context, name, clock).use { store ->
+            store.repository.save(o)
+            store.payments.record(original)
+            assertEquals(PaymentRecordResult.INSERTED, store.payments.correct(change))
+            assertEquals(PaymentRecordResult.ALREADY_RECORDED, store.payments.correct(change))
+            assertTrue(runCatching { store.payments.correct(change.copy(reason = "different")) }.isFailure)
+            assertTrue(runCatching { store.payments.correct(change.copy(operationId = UUID.randomUUID())) }.isFailure)
+            assertEquals(listOf(replacement), store.payments.observeFor(id).first())
+            val history = store.payments.observeHistoryFor(id).first().associateBy { it.payment.id }
+            assertEquals(original, history.getValue(original.id).payment)
+            assertEquals(PaymentHistoryStatus.REPLACED, history.getValue(original.id).status)
+            assertEquals(replacement.id, history.getValue(original.id).replacementId)
+            assertEquals(PaymentHistoryStatus.ACTIVE, history.getValue(replacement.id).status)
+            assertEquals(PaymentRecordResult.INSERTED, store.payments.correct(cancel))
+            assertEquals(PaymentRecordResult.ALREADY_RECORDED, store.payments.correct(change))
+            assertTrue(store.payments.observeFor(id).first().isEmpty())
+            assertEquals(o, store.repository.find(id))
+        }
+        EncryptedStorage.open(context, name, clock).use { store ->
+            val history = store.payments.observeHistoryFor(id).first().associateBy { it.payment.id }
+            assertEquals(2, history.size)
+            assertEquals(PaymentHistoryStatus.CANCELLED, history.getValue(replacement.id).status)
+            assertEquals("Synthetic cancellation", history.getValue(replacement.id).correctionReason)
+            assertTrue(store.repository.delete(id))
+            assertTrue(store.payments.observeHistoryFor(id).first().isEmpty())
+        }
+    }
+
+    @Test fun correctionRejectsConflictsAndLeavesOriginalActive() = runBlocking {
+        val o = Obligation(id, "Synthetic", currency = Currency.getInstance("RUB"),
+            bankZone = ZoneOffset.UTC, terms = ObligationTerms.Other())
+        val original = payment()
+        val another = payment()
+        EncryptedStorage.open(context, name, clock).use { store ->
+            store.repository.save(o)
+            store.payments.record(original)
+            store.payments.record(another)
+            val op = UUID.randomUUID()
+            val usd = Money("USD", 100)
+            val wrongCurrency = payment().copy(amount = usd, allocation = PaymentAllocation.unknown(usd))
+            assertTrue(runCatching { store.payments.correct(PaymentCorrection(op, id, original.id,
+                "wrong currency", wrongCurrency)) }.isFailure)
+            assertTrue(runCatching { store.payments.correct(PaymentCorrection(op, id, original.id,
+                "duplicate replacement", another)) }.isFailure)
+            assertTrue(runCatching { store.payments.correct(PaymentCorrection(original.operationId, id,
+                original.id, "operation collision")) }.isFailure)
+            assertTrue(runCatching { store.payments.correct(PaymentCorrection(op, UUID.randomUUID(),
+                original.id, "wrong obligation")) }.isFailure)
+            assertEquals(setOf(original, another), store.payments.observeFor(id).first().toSet())
+            assertTrue(store.payments.observeHistoryFor(id).first().all { it.status == PaymentHistoryStatus.ACTIVE })
+            assertEquals(PaymentRecordResult.INSERTED, store.payments.correct(PaymentCorrection(op, id,
+                original.id, "valid cancellation")))
+            assertTrue(runCatching { store.payments.record(payment().copy(operationId = op)) }.isFailure)
+            assertEquals(listOf(another), store.payments.observeFor(id).first())
+        }
+    }
+
     /** SQLCipher fixture uses the actual exported v1 DDL and identity hash, not the old APK. */
     @Test fun migrateEncryptedV1Fixture() = runBlocking {
         val password = DatabaseKey.loadOrCreate(context, name)

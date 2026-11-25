@@ -51,7 +51,7 @@ class EncryptedStorage private constructor(
         private fun buildRoom(context: Context, name: String, password: ByteArray): StorageDatabase =
             Room.databaseBuilder(context, StorageDatabase::class.java, name)
                 .openHelperFactory(PreserveFileFactory(password))
-                .addMigrations(PAYMENT_MIGRATION_1_2)
+                .addMigrations(PAYMENT_MIGRATION_1_2, PAYMENT_MIGRATION_2_3)
                 .setJournalMode(RoomDatabase.JournalMode.TRUNCATE)
                 .build()
 
