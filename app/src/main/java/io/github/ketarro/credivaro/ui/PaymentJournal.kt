@@ -39,15 +39,16 @@ private fun paymentMoney(value: Money): String {
 
 @Composable
 internal fun PaymentJournal(obligation: Obligation, repository: PaymentRepository, enabled: Boolean) {
-    var rows by remember { mutableStateOf<List<RecordedPayment>?>(null) }
+    var rows by remember { mutableStateOf<List<PaymentHistoryItem>?>(null) }
     var loadError by remember { mutableStateOf(false) }
     var retry by remember { mutableIntStateOf(0) }
-    var editing by remember { mutableStateOf(false) }
+    var correcting by remember { mutableStateOf<RecordedPayment?>(null) }
+    var cancelling by remember { mutableStateOf<RecordedPayment?>(null) }
     LaunchedEffect(repository, obligation.id, retry) {
         loadError = false
         rows = null
         try {
-            repository.observeFor(obligation.id).collect { rows = it }
+            repository.observeHistoryFor(obligation.id).collect { rows = it }
         } catch (e: CancellationException) {
             throw e
         } catch (_: Exception) {
@@ -58,10 +59,6 @@ internal fun PaymentJournal(obligation: Obligation, repository: PaymentRepositor
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(stringResource(R.string.payment_history), style = MaterialTheme.typography.titleLarge)
             Text(stringResource(R.string.payment_fact_hint), style = MaterialTheme.typography.bodySmall)
-            Button(onClick = { editing = true }, enabled = enabled && rows != null && !loadError,
-                modifier = Modifier.fillMaxWidth().testTag("add-payment")) {
-                Text(stringResource(R.string.payment_add))
-            }
             when {
                 loadError -> {
                     Text(stringResource(R.string.payment_read_error), color = MaterialTheme.colorScheme.error)
@@ -69,7 +66,8 @@ internal fun PaymentJournal(obligation: Obligation, repository: PaymentRepositor
                 }
                 rows == null -> CircularProgressIndicator(Modifier.size(24.dp))
                 rows.orEmpty().isEmpty() -> Text(stringResource(R.string.payment_empty))
-                else -> rows.orEmpty().forEach { row ->
+                else -> rows.orEmpty().forEach { item ->
+                    val row = item.payment
                     HorizontalDivider()
                     Column(Modifier.fillMaxWidth().testTag("payment-row"), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                         Text(paymentMoney(row.amount), style = MaterialTheme.typography.titleMedium)
@@ -80,45 +78,76 @@ internal fun PaymentJournal(obligation: Obligation, repository: PaymentRepositor
                         Text(stringResource(R.string.payment_fees) + ": " + paymentMoney(a.fees))
                         Text(stringResource(R.string.payment_unallocated) + ": " + paymentMoney(a.unallocated))
                         row.notes?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
+                        Text(stringResource(when (item.status) {
+                            PaymentHistoryStatus.ACTIVE -> R.string.ux_payment_active
+                            PaymentHistoryStatus.REPLACED -> R.string.ux_payment_replaced
+                            PaymentHistoryStatus.CANCELLED -> R.string.ux_payment_cancelled
+                        }), modifier = Modifier.testTag("payment-status-" + item.status.name))
+                        item.correctionReason?.let { Text(stringResource(R.string.ux_reason) + ": " + it) }
+                        if (item.status == PaymentHistoryStatus.ACTIVE && enabled) {
+                            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                TextButton(onClick = { correcting = row }, modifier = Modifier.testTag("correct-payment")) { Text(stringResource(R.string.ux_correct)) }
+                                TextButton(onClick = { cancelling = row }, modifier = Modifier.testTag("cancel-payment")) { Text(stringResource(R.string.ux_cancel_payment)) }
+                            }
+                        }
                     }
                 }
             }
         }
     }
-    if (editing) PaymentEntryDialog(obligation, repository) { editing = false }
+    correcting?.let { value -> key(value.id) {
+        PaymentEntryDialog(obligation, repository, target = value, onSaved = { correcting = null }, close = { correcting = null })
+    } }
+    cancelling?.let { value -> key(value.id) { PaymentCancelDialog(obligation, repository, value) { cancelling = null } } }
 }
 
 @Composable
-private fun PaymentEntryDialog(obligation: Obligation, repository: PaymentRepository, close: () -> Unit) {
-    var date by remember { mutableStateOf(LocalDate.now(obligation.bankZone).toString()) }
-    var amount by remember { mutableStateOf("") }
-    var principal by remember { mutableStateOf("") }
-    var interest by remember { mutableStateOf("") }
-    var fees by remember { mutableStateOf("") }
-    var notes by remember { mutableStateOf("") }
+internal fun PaymentEntryDialog(obligation: Obligation, repository: PaymentRepository,
+    target: RecordedPayment? = null, onSaved: () -> Unit, close: () -> Unit) {
+    val initialDate = target?.bankDate?.toString() ?: LocalDate.now(obligation.bankZone).toString()
+    fun raw(m: Money?) = m?.let { BigDecimal.valueOf(it.minorUnits, obligation.currency.defaultFractionDigits).toPlainString() }.orEmpty()
+    var date by remember { mutableStateOf(initialDate) }
+    var amount by remember { mutableStateOf(raw(target?.amount)) }
+    var principal by remember { mutableStateOf(raw(target?.allocation?.principal)) }
+    var interest by remember { mutableStateOf(raw(target?.allocation?.interest)) }
+    var fees by remember { mutableStateOf(raw(target?.allocation?.fees)) }
+    var notes by remember { mutableStateOf(target?.notes.orEmpty()) }
+    var reason by remember { mutableStateOf("") }
+    var advanced by remember { mutableStateOf(target != null) }
+    var discard by remember { mutableStateOf(false) }
+    val correctionOperation = remember { UUID.randomUUID() }
     var invalid by remember { mutableStateOf(false) }
     var failed by remember { mutableStateOf(false) }
     var busy by remember { mutableStateOf(false) }
     var pending by remember { mutableStateOf<RecordedPayment?>(null) }
     val scope = rememberCoroutineScope()
     val editable = !busy && pending == null
+    val dirty = date != initialDate || amount != raw(target?.amount) || principal != raw(target?.allocation?.principal) ||
+        interest != raw(target?.allocation?.interest) || fees != raw(target?.allocation?.fees) || notes != target?.notes.orEmpty() || reason.isNotBlank() || pending != null
+    fun requestClose() { if (!busy) { if (dirty) discard = true else close() } }
     AlertDialog(
-        onDismissRequest = { if (!busy) close() },
+        onDismissRequest = { requestClose() },
         properties = DialogProperties(dismissOnBackPress = !busy, dismissOnClickOutside = false),
-        title = { Text(stringResource(R.string.payment_add)) },
+        title = { Text(stringResource(if (target == null) R.string.payment_add else R.string.ux_correct)) },
         text = {
             Column(Modifier.heightIn(max = 430.dp).verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(stringResource(R.string.payment_fact_hint))
-                Text(obligation.currency.currencyCode, style = MaterialTheme.typography.labelLarge)
+                Text(obligation.title + " · " + obligation.currency.currencyCode, style = MaterialTheme.typography.titleMedium)
+                PaymentInput(amount, { amount = it.take(32) }, R.string.payment_amount, "payment-amount", editable, true)
                 PaymentInput(date, { date = it.take(10) }, R.string.payment_date, "payment-date", editable)
                 Text(stringResource(R.string.payment_date_hint), style = MaterialTheme.typography.bodySmall)
-                PaymentInput(amount, { amount = it.take(32) }, R.string.payment_amount, "payment-amount", editable, true)
+                OutlinedButton(onClick = { advanced = !advanced }, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).testTag("payment-advanced")) {
+                    Text(stringResource(if (advanced) R.string.form_hide_additional else R.string.ux_optional_details))
+                }
+                if (advanced) {
                 Text(stringResource(R.string.payment_allocation_hint), style = MaterialTheme.typography.bodySmall)
                 PaymentInput(principal, { principal = it.take(32) }, R.string.payment_principal, "payment-principal", editable, true)
                 PaymentInput(interest, { interest = it.take(32) }, R.string.payment_interest, "payment-interest", editable, true)
                 PaymentInput(fees, { fees = it.take(32) }, R.string.payment_fees, "payment-fees", editable, true)
                 PaymentInput(notes, { notes = it.take(500) }, R.string.field_notes, "payment-notes", editable)
+                }
+                if (target != null) PaymentInput(reason, { reason = it.take(500) }, R.string.ux_reason, "correction-reason", editable)
                 if (invalid) Text(stringResource(R.string.payment_invalid), color = MaterialTheme.colorScheme.error,
                     modifier = Modifier.testTag("payment-invalid"))
                 if (failed) Text(stringResource(R.string.payment_retry_hint), color = MaterialTheme.colorScheme.error)
@@ -133,7 +162,7 @@ private fun PaymentEntryDialog(obligation: Obligation, repository: PaymentReposi
                     buildPayment(obligation, UUID.randomUUID(), UUID.randomUUID(), date, amount,
                         principal, interest, fees, notes, LocalDate.now(obligation.bankZone))
                 }.getOrNull()
-                if (value == null) {
+                if (value == null || (target != null && reason.isBlank())) {
                     invalid = true
                 } else {
                     focus.clearFocus(force = true)
@@ -144,8 +173,8 @@ private fun PaymentEntryDialog(obligation: Obligation, repository: PaymentReposi
                     busy = true
                     scope.launch {
                         try {
-                            repository.record(value)
-                            close()
+                            if (target == null) repository.record(value) else repository.correct(PaymentCorrection(correctionOperation, obligation.id, target.id, reason.trim(), value))
+                            onSaved()
                         } catch (e: CancellationException) {
                             throw e
                         } catch (_: Exception) {
@@ -155,7 +184,7 @@ private fun PaymentEntryDialog(obligation: Obligation, repository: PaymentReposi
                         }
                     }
                 }
-            }) { Text(stringResource(R.string.save)) }
+            }) { Text(stringResource(R.string.ux_save_record)) }
         },
         dismissButton = {
             val focus = LocalFocusManager.current
@@ -163,10 +192,43 @@ private fun PaymentEntryDialog(obligation: Obligation, repository: PaymentReposi
             TextButton(enabled = !busy, onClick = {
                 focus.clearFocus(force = true)
                 keyboard?.hide()
-                close()
+                requestClose()
             }) { Text(stringResource(R.string.cancel)) }
         }
     )
+    if (discard) AlertDialog(onDismissRequest = { discard = false }, title = { Text(stringResource(R.string.ux_discard_title)) },
+        text = { Text(stringResource(if (pending != null) R.string.payment_retry_hint else R.string.ux_discard_hint)) },
+        confirmButton = { TextButton(onClick = { discard = false; close() }) { Text(stringResource(R.string.ux_discard)) } },
+        dismissButton = { TextButton(onClick = { discard = false }) { Text(stringResource(R.string.ux_keep_editing)) } })
+}
+
+@Composable
+private fun PaymentCancelDialog(obligation: Obligation, repository: PaymentRepository, target: RecordedPayment, close: () -> Unit) {
+    var reason by remember { mutableStateOf("") }
+    var pending by remember { mutableStateOf<PaymentCorrection?>(null) }
+    var busy by remember { mutableStateOf(false) }
+    var failed by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+    AlertDialog(onDismissRequest = { if (!busy) close() },
+        properties = DialogProperties(dismissOnBackPress = !busy, dismissOnClickOutside = false),
+        title = { Text(stringResource(R.string.ux_cancel_payment)) },
+        text = { Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(paymentMoney(target.amount) + " · " + target.bankDate)
+            Text(stringResource(R.string.ux_cancel_hint))
+            PaymentInput(reason, { reason = it.take(500) }, R.string.ux_reason, "cancel-reason", !busy && pending == null)
+            if (failed) Text(stringResource(R.string.payment_retry_hint), color = MaterialTheme.colorScheme.error)
+        } },
+        confirmButton = { TextButton(enabled = !busy && reason.isNotBlank(), modifier = Modifier.testTag("confirm-cancel-payment"), onClick = {
+            val value = pending ?: PaymentCorrection(UUID.randomUUID(), obligation.id, target.id, reason.trim())
+            pending = value; busy = true; failed = false
+            scope.launch {
+                try { repository.correct(value); close() }
+                catch (e: CancellationException) { throw e }
+                catch (_: Exception) { failed = true }
+                finally { busy = false }
+            }
+        }) { Text(stringResource(R.string.ux_cancel_payment)) } },
+        dismissButton = { TextButton(enabled = !busy, onClick = close) { Text(stringResource(R.string.back)) } })
 }
 
 @Composable

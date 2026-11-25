@@ -32,12 +32,15 @@ class PaymentUiTest {
         rule.onNodeWithTag("field-${R.string.field_title}").performScrollTo()
             .performSemanticsAction(SemanticsActions.SetText) { check(it(AnnotatedString(title))) }
         rule.onNodeWithTag("save-obligation").performScrollTo().activate()
+        waitText(label(R.string.ux_actions))
+        rule.onNodeWithTag("credit-tab-payments").activate()
         waitText(label(R.string.payment_empty))
         rule.onNodeWithTag("add-payment").performScrollTo().activate()
         rule.onNodeWithTag("save-payment").activate()
         waitTag("payment-invalid")
         rule.onNodeWithTag("payment-amount").performScrollTo()
             .performSemanticsAction(SemanticsActions.SetText) { check(it(AnnotatedString("123.45"))) }
+        rule.onNodeWithTag("payment-advanced").performScrollTo().activate()
         rule.onNodeWithTag("payment-notes").performScrollTo()
             .performSemanticsAction(SemanticsActions.SetText) { check(it(AnnotatedString(note))) }
         rule.onNodeWithTag("save-payment").activate()
@@ -50,9 +53,9 @@ class PaymentUiTest {
         waitText(title)
         rule.activityRule.scenario.recreate()
         waitText(title)
-        rule.onNodeWithText(title).activate()
         waitText(note)
-        rule.onNodeWithText(label(R.string.delete_obligation)).performScrollTo().activate()
+        rule.onNodeWithTag("credit-actions").activate()
+        rule.onNodeWithText(label(R.string.delete_obligation)).activate()
         rule.onNodeWithText(label(R.string.delete), substring = false).activate()
         rule.waitUntil(30000) { rule.onAllNodesWithText(title).fetchSemanticsNodes().isEmpty() }
     }

@@ -35,6 +35,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
@@ -149,6 +150,16 @@ private fun AlphaScreen(
     var settings by rememberSaveable { mutableStateOf(false) }
     var about by rememberSaveable { mutableStateOf(false) }
     var obligations by rememberSaveable { mutableStateOf(false) }
+    var route by rememberSaveable { mutableStateOf("list") }
+    var paymentRequested by rememberSaveable { mutableStateOf(false) }
+    val holder = rememberSaveableStateHolder()
+    val homeScroll = rememberScrollState()
+    val listScroll = rememberScrollState()
+    val settingsScroll = rememberScrollState()
+    val aboutScroll = rememberScrollState()
+    val innerScroll = key(route) { rememberScrollState() }
+    val screenScroll = when { about -> aboutScroll; settings -> settingsScroll; !obligations -> homeScroll; route == "list" -> listScroll; else -> innerScroll }
+    fun openRoute(value: String, payment: Boolean = false) { route = value; paymentRequested = payment; obligations = true; settings = false; about = false }
     var dialog by rememberSaveable { mutableStateOf("") }
     var showLicenses by rememberSaveable { mutableStateOf(false) }
     var showDiagnostics by rememberSaveable { mutableStateOf(false) }
@@ -170,7 +181,7 @@ private fun AlphaScreen(
     Scaffold(
         containerColor = colors.background,
         bottomBar = {
-            if (!keyboardVisible) CredivaroBottomBar(
+            if (!keyboardVisible && !(obligations && (route == "new" || route.startsWith("edit:")))) CredivaroBottomBar(
                 settingsSelected = settings,
                 obligationsSelected = obligations,
                 onHome = { settings = false; about = false; obligations = false },
@@ -181,7 +192,7 @@ private fun AlphaScreen(
     ) { padding ->
         Box(Modifier.fillMaxSize().padding(padding).consumeWindowInsets(padding).imePadding(), contentAlignment = Alignment.TopCenter) {
             Column(
-                Modifier.widthIn(max = 640.dp).fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 16.dp),
+                Modifier.widthIn(max = 640.dp).fillMaxWidth().verticalScroll(screenScroll).padding(horizontal = 16.dp, vertical = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 if (about) {
@@ -277,12 +288,20 @@ private fun AlphaScreen(
                         }
                         is StorageState.Ready -> {
                             if (obligations) {
-                                ObligationPreview(storageState.records,
-                                    saveRecord = { storageState.repository.save(it) },
-                                    deleteRecord = { check(storageState.repository.delete(it)) },
-                                    payments = storageState.payments)
+                                holder.SaveableStateProvider("credit-workspace") {
+                                    ObligationPreview(storageState.records,
+                                        saveRecord = { storageState.repository.save(it) },
+                                        deleteRecord = { check(storageState.repository.delete(it)) },
+                                        payments = storageState.payments, route = route,
+                                        onRoute = { route = it }, paymentRequested = paymentRequested,
+                                        onPaymentRequested = { paymentRequested = it }, scroll = screenScroll)
+                                }
                             } else {
-                                PreviewDashboard(storageState.records) { obligations = true; settings = false; about = false }
+                                PreviewDashboard(storageState.records,
+                                    open = { openRoute("list") },
+                                    add = { openRoute("new") },
+                                    openCredit = { openRoute("detail:" + it) },
+                                    recordPayment = { openRoute("detail:" + it, true) })
                             }
                         }
                     }

@@ -2,6 +2,10 @@ package io.github.ketarro.credivaro.ui
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.ScrollState
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.bringIntoViewRequester
@@ -95,34 +99,65 @@ private fun PreviewNotice() {
 }
 
 @Composable
-fun PreviewDashboard(records: List<Obligation>, open: () -> Unit) {
+fun PreviewDashboard(records: List<Obligation>, open: () -> Unit, add: () -> Unit,
+    openCredit: (UUID) -> Unit, recordPayment: (UUID) -> Unit) {
     val colors = MaterialTheme.colorScheme
     val summary = summarizePreview(records)
+    var choosePayment by rememberSaveable { mutableStateOf(false) }
+    val active = records.filter { it.status == ObligationStatus.ACTIVE }
+    val next = active.filter { item -> item.paymentDate()?.let { !it.isBefore(LocalDate.now(item.bankZone)) } == true }
+        .minByOrNull { requireNotNull(it.paymentDate()) }
     Card(shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = colors.primaryContainer, contentColor = colors.onPrimaryContainer)) {
         Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(stringResource(R.string.known_test_balances), style = MaterialTheme.typography.titleMedium)
-            if (records.isEmpty()) Text(stringResource(R.string.empty_obligations), style = MaterialTheme.typography.bodyMedium)
+            if (records.isEmpty()) Text(stringResource(R.string.empty_obligations))
             if (records.isNotEmpty() && summary.totals.isEmpty()) Text(stringResource(R.string.not_set), style = MaterialTheme.typography.headlineSmall)
             summary.totals.forEach { (code, total) ->
                 Text(if (total == null) stringResource(R.string.preview_currency_overflow, code) else total.display(),
                     style = MaterialTheme.typography.headlineSmall)
             }
             if (records.isNotEmpty()) {
-                Text(pluralStringResource(R.plurals.obligation_count, records.size, records.size), style = MaterialTheme.typography.bodyMedium)
+                Text(pluralStringResource(R.plurals.obligation_count, records.size, records.size))
                 if (summary.unknown > 0) Text(stringResource(R.string.missing_balances, summary.unknown), style = MaterialTheme.typography.bodySmall)
-            }
-            TextButton(onClick = open, modifier = Modifier.align(Alignment.End)) {
-                Text(stringResource(if (records.isEmpty()) R.string.add_obligation else R.string.view_obligations))
-                Spacer(Modifier.width(4.dp))
-                Icon(painterResource(R.drawable.ic_chevron), null, modifier = Modifier.size(16.dp))
             }
         }
     }
+    Button(onClick = add, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).testTag("home-add")) {
+        Text("+ " + stringResource(R.string.add_obligation))
+    }
+    if (active.isNotEmpty()) OutlinedButton(onClick = {
+        if (active.size == 1) recordPayment(active.single().id) else choosePayment = true
+    }, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).testTag("home-pay")) {
+        Text(stringResource(R.string.payment_add))
+    }
+    if (next != null) {
+        Text(stringResource(R.string.ux_next_known), style = MaterialTheme.typography.titleMedium)
+        ObligationListCard(next, { openCredit(next.id) }, { recordPayment(next.id) })
+    }
+    if (records.isNotEmpty()) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(stringResource(R.string.obligations_title), style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+            TextButton(onClick = open) { Text(stringResource(R.string.view_obligations)) }
+        }
+        records.take(3).forEach { item -> key(item.id) { ObligationListCard(item, { openCredit(item.id) }) } }
+    }
+    if (choosePayment) AlertDialog(onDismissRequest = { choosePayment = false },
+        title = { Text(stringResource(R.string.ux_choose_credit)) },
+        text = { Column(Modifier.heightIn(max = 360.dp).verticalScroll(rememberScrollState())) {
+            active.forEach { item ->
+                TextButton(onClick = { choosePayment = false; recordPayment(item.id) },
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
+                    Text(item.title + " · " + item.currency.currencyCode)
+                }
+            }
+        } }, confirmButton = {}, dismissButton = {
+            TextButton(onClick = { choosePayment = false }) { Text(stringResource(R.string.cancel)) }
+        })
     PreviewNotice()
 }
 
 @Composable
-private fun ObligationListCard(item: Obligation, open: () -> Unit) {
+private fun ObligationListCard(item: Obligation, open: () -> Unit, pay: (() -> Unit)? = null) {
     val colors = MaterialTheme.colorScheme
     Card(onClick = open, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = colors.surface)) {
@@ -149,143 +184,215 @@ private fun ObligationListCard(item: Obligation, open: () -> Unit) {
                 if (payment != null) Text(payment.display(), style = MaterialTheme.typography.bodyMedium)
                 if (date != null) Text(date.displayDate(), style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant)
             }
+            if (pay != null) OutlinedButton(onClick = pay, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
+                Text(stringResource(R.string.payment_add))
+            }
         }
     }
 }
 
 @Composable
 fun ObligationPreview(
-    records: List<Obligation>,
-    saveRecord: suspend (Obligation) -> Unit,
-    deleteRecord: suspend (UUID) -> Unit,
-    payments: PaymentRepository
+    records: List<Obligation>, saveRecord: suspend (Obligation) -> Unit,
+    deleteRecord: suspend (UUID) -> Unit, payments: PaymentRepository,
+    route: String, onRoute: (String) -> Unit, paymentRequested: Boolean,
+    onPaymentRequested: (Boolean) -> Unit, scroll: ScrollState
 ) {
-    var editor by remember { mutableStateOf(false) }
-    var editing by remember { mutableStateOf<Obligation?>(null) }
-    var detailId by remember { mutableStateOf<UUID?>(null) }
+    val editor = route == "new" || route.startsWith("edit:")
+    val detailId = route.substringAfter(':', "").let { runCatching { UUID.fromString(it) }.getOrNull() }
+    val detail = records.firstOrNull { it.id == detailId }
     var deleting by remember { mutableStateOf(false) }
+    var menu by remember { mutableStateOf(false) }
     var busy by remember { mutableStateOf(false) }
     var writeFailed by remember { mutableStateOf(false) }
+    var search by rememberSaveable { mutableStateOf("") }
+    var filter by rememberSaveable { mutableStateOf("ALL") }
+    var currencyFilter by rememberSaveable { mutableStateOf("ALL") }
+    var tab by rememberSaveable(detailId?.toString()) { mutableStateOf("overview") }
     val scope = rememberCoroutineScope()
     fun write(operation: suspend () -> Unit, onSuccess: () -> Unit) {
         if (busy) return
-        busy = true
-        writeFailed = false
+        busy = true; writeFailed = false
         scope.launch {
-            try {
-                operation()
-                onSuccess()
-            } catch (e: CancellationException) {
-                throw e
-            } catch (_: Exception) {
-                writeFailed = true
-            } finally {
-                busy = false
-            }
+            try { operation(); onSuccess() }
+            catch (e: CancellationException) { throw e }
+            catch (_: Exception) { writeFailed = true }
+            finally { busy = false }
         }
     }
-    val detail = records.firstOrNull { it.id == detailId }
-    BackHandler(busy || editor || detailId != null) {
-        if (!busy) {
-            writeFailed = false
-            if (editor) editor = false else detailId = null
-        }
-    }
-    if (busy) AlertDialog(
-        onDismissRequest = {},
+    fun backToList() { writeFailed = false; menu = false; onPaymentRequested(false); onRoute("list") }
+    BackHandler(busy || (!editor && route != "list")) { if (!busy) backToList() }
+    if (busy) AlertDialog(onDismissRequest = {},
         properties = DialogProperties(dismissOnBackPress = false, dismissOnClickOutside = false),
-        text = { Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
-            CircularProgressIndicator(Modifier.size(24.dp))
-            Text(stringResource(R.string.storage_working))
-        } },
-        confirmButton = {}
-    )
-    if (editor) {
-        PreviewEditor(editing, busy = busy, writeFailed = writeFailed,
-            onCancel = { if (!busy) { editor = false; writeFailed = false } }) { value ->
-            write({ saveRecord(value) }) { detailId = value.id; editor = false }
+        text = { Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            CircularProgressIndicator(Modifier.size(24.dp)); Text(stringResource(R.string.storage_working))
+        } }, confirmButton = {})
+    if (editor && (route == "new" || detail != null)) {
+        key(route) {
+            PreviewEditor(detail, busy = busy, writeFailed = writeFailed,
+                onCancel = { if (!busy) { writeFailed = false; onRoute(if (detailId == null) "list" else "detail:" + detailId) } }) { value ->
+                write({ saveRecord(value) }) { tab = "overview"; onRoute("detail:" + value.id) }
+            }
         }
     } else if (detail != null) {
-        TextButton(onClick = { detailId = null; writeFailed = false }) { Text(stringResource(R.string.back)) }
-        Text(detail.title, style = MaterialTheme.typography.headlineSmall)
-        Card {
-            Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(stringResource(typeLabel(detail.type)))
-                detail.lender?.let { Text(it) }
-                Text(detail.balance?.totalDebt.display(), style = MaterialTheme.typography.headlineMedium)
-                detail.balance?.let { Text(stringResource(R.string.preview_balance_date, it.bankAsOf.displayDate())) }
-                detail.paymentDate()?.let { Text(stringResource(R.string.field_due_date) + ": " + it.displayDate()) }
-                detail.notes?.let { Text(stringResource(R.string.field_notes), style = MaterialTheme.typography.labelMedium); Text(it) }
-                val rate = when (val t = detail.terms) {
-                    is ObligationTerms.Loan -> t.annualRate
-                    is ObligationTerms.CreditCard -> t.annualRate
-                    is ObligationTerms.Installment -> t.annualRate
-                    is ObligationTerms.Other -> null
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            IconButton(onClick = { backToList() }, enabled = !busy) {
+                Icon(painterResource(R.drawable.ic_back), stringResource(R.string.back))
+            }
+            Text(detail.title, style = MaterialTheme.typography.headlineSmall, modifier = Modifier.weight(1f))
+            Box {
+                TextButton(onClick = { menu = true }, enabled = !busy, modifier = Modifier.testTag("credit-actions")) {
+                    Text(stringResource(R.string.ux_actions))
                 }
-                Text(stringResource(R.string.form_rate) + ": " + (rate?.percent?.toPlainString() ?: stringResource(R.string.not_set)))
-                when (val t = detail.terms) {
-                    is ObligationTerms.Loan -> Text(stringResource(R.string.form_payment) + ": " + t.scheduledPayment.display())
-                    is ObligationTerms.CreditCard -> {
-                        Text(stringResource(R.string.form_limit) + ": " + t.creditLimit.display())
-                        Text(stringResource(R.string.form_minimum) + ": " + t.minimumPayment.display())
-                        t.cashFeeFreeLimit?.let { Text(stringResource(R.string.field_cash_limit) + ": " + it.display()) }
-                    }
-                    is ObligationTerms.Installment -> Text(stringResource(R.string.form_payment) + ": " + t.installmentAmount.display())
-                    is ObligationTerms.Other -> Unit
+                DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                    DropdownMenuItem(text = { Text(stringResource(R.string.edit_obligation)) },
+                        onClick = { menu = false; writeFailed = false; onRoute("edit:" + detail.id) })
+                    DropdownMenuItem(text = { Text(stringResource(R.string.delete_obligation), color = MaterialTheme.colorScheme.error) },
+                        onClick = { menu = false; deleting = true; writeFailed = false })
                 }
             }
         }
-        key(detail.id) { PaymentJournal(detail, payments, enabled = !busy) }
+        Text(stringResource(typeLabel(detail.type)) + (detail.lender?.let { " · " + it } ?: ""),
+            color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)) {
+            Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(stringResource(R.string.ux_bank_balance), style = MaterialTheme.typography.labelLarge)
+                Text(detail.balance?.totalDebt.display(), style = MaterialTheme.typography.headlineMedium)
+                detail.balance?.let { Text(stringResource(R.string.preview_balance_date, it.bankAsOf.displayDate())) }
+                detail.payment()?.let { Text(stringResource(if (detail.type == ObligationType.CREDIT_CARD) R.string.form_minimum else R.string.form_payment) + ": " + it.display()) }
+                detail.paymentDate()?.let { Text(stringResource(R.string.field_due_date) + ": " + it.displayDate()) }
+            }
+        }
+        if (detail.status == ObligationStatus.ACTIVE) Button(onClick = { onPaymentRequested(true) }, enabled = !busy,
+            modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).testTag("add-payment")) {
+            Text(stringResource(R.string.payment_add))
+        }
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            listOf("overview" to R.string.ux_overview, "payments" to R.string.ux_payments, "terms" to R.string.ux_terms).forEach { (id, label) ->
+                FilterChip(selected = tab == id, onClick = { tab = id; scope.launch { scroll.scrollTo(0) } },
+                    label = { Text(stringResource(label)) }, modifier = Modifier.weight(1f).heightIn(min = 48.dp).testTag("credit-tab-" + id))
+            }
+        }
+        when (tab) {
+            "payments" -> key(detail.id) { PaymentJournal(detail, payments, enabled = !busy) }
+            "terms" -> Card {
+                Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    val rate = when (val t = detail.terms) {
+                        is ObligationTerms.Loan -> t.annualRate
+                        is ObligationTerms.CreditCard -> t.annualRate
+                        is ObligationTerms.Installment -> t.annualRate
+                        is ObligationTerms.Other -> null
+                    }
+                    Text(stringResource(R.string.form_rate) + ": " + (rate?.percent?.toPlainString() ?: stringResource(R.string.not_set)))
+                    when (val t = detail.terms) {
+                        is ObligationTerms.CreditCard -> {
+                            Text(stringResource(R.string.form_limit) + ": " + t.creditLimit.display())
+                            t.cashFeeFreeLimit?.let { Text(stringResource(R.string.field_cash_limit) + ": " + it.display()) }
+                        }
+                        else -> Unit
+                    }
+                    Text(stringResource(R.string.field_currency) + ": " + detail.currency.currencyCode)
+                    TextButton(onClick = { onRoute("edit:" + detail.id) }, enabled = !busy) { Text(stringResource(R.string.edit_obligation)) }
+                }
+            }
+            else -> Card {
+                Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(stringResource(R.string.field_currency) + ": " + detail.currency.currencyCode)
+                    detail.notes?.let { Text(stringResource(R.string.field_notes), style = MaterialTheme.typography.labelMedium); Text(it) }
+                    Text(stringResource(R.string.payment_fact_hint), style = MaterialTheme.typography.bodySmall)
+                    TextButton(onClick = { tab = "payments" }) { Text(stringResource(R.string.payment_history)) }
+                }
+            }
+        }
+        if (paymentRequested) key(detail.id) {
+            PaymentEntryDialog(detail, payments, onSaved = {
+                onPaymentRequested(false); tab = "payments"; scope.launch { scroll.scrollTo(0) }
+            }, close = { onPaymentRequested(false) })
+        }
         if (writeFailed) Text(stringResource(R.string.storage_write_error), color = MaterialTheme.colorScheme.error)
-        Button(onClick = { editing = detail; editor = true; writeFailed = false }, enabled = !busy, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.edit_obligation)) }
-        TextButton(onClick = { deleting = true; writeFailed = false }, enabled = !busy) { Text(stringResource(R.string.delete_obligation), color = MaterialTheme.colorScheme.error) }
         if (deleting) AlertDialog(onDismissRequest = { deleting = false },
             title = { Text(stringResource(R.string.delete_obligation)) },
             text = { Text(stringResource(R.string.delete_confirm)) },
             confirmButton = { TextButton(onClick = {
-                deleting = false
-                write({ deleteRecord(detail.id) }) { detailId = null }
+                deleting = false; write({ deleteRecord(detail.id) }) { backToList() }
             }) { Text(stringResource(R.string.delete)) } },
             dismissButton = { TextButton(onClick = { deleting = false }) { Text(stringResource(R.string.cancel)) } })
+    } else if (route != "list") {
+        TextButton(onClick = { backToList() }) { Text(stringResource(R.string.back)) }
+        Text(stringResource(R.string.storage_loading))
     } else {
         Text(stringResource(R.string.obligations_title), style = MaterialTheme.typography.headlineSmall, modifier = Modifier.semantics { heading() })
         if (writeFailed) Text(stringResource(R.string.storage_write_error), color = MaterialTheme.colorScheme.error)
-        Button(onClick = { editing = null; editor = true; writeFailed = false }, enabled = !busy, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.add_obligation)) }
-        if (records.isEmpty()) Text(stringResource(R.string.empty_obligations))
-        records.forEach { item -> ObligationListCard(item) { detailId = item.id } }
+        Button(onClick = { writeFailed = false; onRoute("new") }, enabled = !busy, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).testTag("list-add")) {
+            Text(stringResource(R.string.add_obligation))
+        }
+        if (records.isNotEmpty()) {
+            OutlinedTextField(search, { search = it }, label = { Text(stringResource(R.string.ux_search)) },
+                singleLine = true, modifier = Modifier.fillMaxWidth().testTag("credit-search"))
+            Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                FilterChip(filter == "ALL", { filter = "ALL" }, label = { Text(stringResource(R.string.ux_all_types)) })
+                ObligationType.entries.forEach { t -> FilterChip(filter == t.name, { filter = t.name }, label = { Text(stringResource(typeLabel(t))) }) }
+            }
+            Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                FilterChip(currencyFilter == "ALL", { currencyFilter = "ALL" }, label = { Text(stringResource(R.string.ux_all_currencies)) })
+                records.map { it.currency.currencyCode }.distinct().sorted().forEach { code ->
+                    FilterChip(currencyFilter == code, { currencyFilter = code }, label = { Text(code) })
+                }
+            }
+        }
+        val visible = records.filter { (filter == "ALL" || it.type.name == filter) &&
+            (currencyFilter == "ALL" || it.currency.currencyCode == currencyFilter) &&
+            (search.isBlank() || it.title.contains(search.trim(), ignoreCase = true) || it.lender.orEmpty().contains(search.trim(), ignoreCase = true)) }
+        if (visible.isEmpty()) Text(stringResource(if (records.isEmpty()) R.string.empty_obligations else R.string.ux_no_matches))
+        visible.forEach { item -> key(item.id) {
+            ObligationListCard(item, { onRoute("detail:" + item.id) }, if (item.status == ObligationStatus.ACTIVE) ({
+                onRoute("detail:" + item.id); onPaymentRequested(true)
+            }) else null)
+        } }
         PreviewNotice()
     }
 }
 
 @Composable
 private fun PreviewEditor(existing: Obligation?, busy: Boolean, writeFailed: Boolean, onCancel: () -> Unit, onSave: (Obligation) -> Unit) {
-    var type by remember { mutableStateOf(existing?.type ?: ObligationType.LOAN) }
-    var title by remember { mutableStateOf(existing?.title.orEmpty()) }
-    var lender by remember { mutableStateOf(existing?.lender.orEmpty()) }
-    var currency by remember { mutableStateOf(existing?.currency?.currencyCode ?: "RUB") }
-    var balance by remember { mutableStateOf(existing?.balance?.totalDebt?.raw().orEmpty()) }
+    var type by rememberSaveable { mutableStateOf(existing?.type ?: ObligationType.LOAN) }
+    var title by rememberSaveable { mutableStateOf(existing?.title.orEmpty()) }
+    var lender by rememberSaveable { mutableStateOf(existing?.lender.orEmpty()) }
+    var currency by rememberSaveable { mutableStateOf(existing?.currency?.currencyCode ?: "RUB") }
+    var balance by rememberSaveable { mutableStateOf(existing?.balance?.totalDebt?.raw().orEmpty()) }
     val oldTerms = existing?.terms
-    var rate by remember { mutableStateOf(when (oldTerms) {
+    var rate by rememberSaveable { mutableStateOf(when (oldTerms) {
         is ObligationTerms.Loan -> oldTerms.annualRate
         is ObligationTerms.CreditCard -> oldTerms.annualRate
         is ObligationTerms.Installment -> oldTerms.annualRate
         else -> null
     }?.percent?.toPlainString().orEmpty()) }
-    var payment by remember { mutableStateOf(when (oldTerms) {
+    var payment by rememberSaveable { mutableStateOf(when (oldTerms) {
         is ObligationTerms.Loan -> oldTerms.scheduledPayment
         is ObligationTerms.CreditCard -> oldTerms.minimumPayment
         is ObligationTerms.Installment -> oldTerms.installmentAmount
         else -> null
     }?.raw().orEmpty()) }
-    var limit by remember { mutableStateOf((oldTerms as? ObligationTerms.CreditCard)?.creditLimit?.raw().orEmpty()) }
-    var notes by remember { mutableStateOf(existing?.notes.orEmpty()) }
-    var due by remember { mutableStateOf(existing?.paymentDate()?.toString().orEmpty()) }
-    var cashLimit by remember { mutableStateOf((oldTerms as? ObligationTerms.CreditCard)?.cashFeeFreeLimit?.raw().orEmpty()) }
-    var expanded by remember { mutableStateOf(false) }
-    var currencyMenu by remember { mutableStateOf(false) }
-    var error by remember { mutableStateOf(false) }
+    var limit by rememberSaveable { mutableStateOf((oldTerms as? ObligationTerms.CreditCard)?.creditLimit?.raw().orEmpty()) }
+    var notes by rememberSaveable { mutableStateOf(existing?.notes.orEmpty()) }
+    var due by rememberSaveable { mutableStateOf(existing?.paymentDate()?.toString().orEmpty()) }
+    var cashLimit by rememberSaveable { mutableStateOf((oldTerms as? ObligationTerms.CreditCard)?.cashFeeFreeLimit?.raw().orEmpty()) }
+    var expanded by rememberSaveable { mutableStateOf(existing != null) }
+    var dirty by rememberSaveable { mutableStateOf(false) }
+    var discard by rememberSaveable { mutableStateOf(false) }
+    fun requestCancel() { if (!busy) { if (dirty) discard = true else onCancel() } }
+    BackHandler(true) { requestCancel() }
+    if (discard) AlertDialog(onDismissRequest = { discard = false }, title = { Text(stringResource(R.string.ux_discard_title)) },
+        text = { Text(stringResource(R.string.ux_discard_hint)) },
+        confirmButton = { TextButton(onClick = { discard = false; onCancel() }) { Text(stringResource(R.string.ux_discard)) } },
+        dismissButton = { TextButton(onClick = { discard = false }) { Text(stringResource(R.string.ux_keep_editing)) } })
+    var currencyMenu by rememberSaveable { mutableStateOf(false) }
+    var error by rememberSaveable { mutableStateOf(false) }
     val focusManager = LocalFocusManager.current
-    Text(stringResource(if (existing == null) R.string.add_obligation else R.string.edit_obligation), style = MaterialTheme.typography.headlineSmall)
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        IconButton(onClick = { requestCancel() }, enabled = !busy) { Icon(painterResource(R.drawable.ic_back), stringResource(R.string.back)) }
+        Text(stringResource(if (existing == null) R.string.add_obligation else R.string.edit_obligation), style = MaterialTheme.typography.headlineSmall)
+    }
     PreviewNotice()
     Text(stringResource(R.string.form_required_hint), style = MaterialTheme.typography.bodySmall)
     FormSection(R.string.form_basics) {
@@ -294,7 +401,7 @@ private fun PreviewEditor(existing: Obligation?, busy: Boolean, writeFailed: Boo
             ObligationType.entries.forEach { choice ->
                 Row(Modifier.fillMaxWidth().heightIn(min = 48.dp).selectable(selected = type == choice,
                     enabled = existing == null, role = Role.RadioButton, onClick = {
-                        if (type != choice) { type = choice; rate = ""; payment = ""; limit = ""; due = ""; cashLimit = "" }
+                        if (type != choice) { dirty = true; type = choice; rate = ""; payment = ""; limit = ""; due = ""; cashLimit = "" }
                     }), verticalAlignment = Alignment.CenterVertically) {
                     RadioButton(selected = type == choice, onClick = null, enabled = existing == null)
                     Spacer(Modifier.width(12.dp))
@@ -304,8 +411,8 @@ private fun PreviewEditor(existing: Obligation?, busy: Boolean, writeFailed: Boo
                 }
             }
         }
-        StaticField(title, { title = it.take(120) }, R.string.field_title, optional = false)
-        StaticField(lender, { lender = it.take(120) }, R.string.form_lender)
+        StaticField(title, { dirty = true; title = it.take(120) }, R.string.field_title, optional = false)
+        StaticField(lender, { dirty = true; lender = it.take(120) }, R.string.form_lender)
         Text(stringResource(R.string.field_currency), style = MaterialTheme.typography.labelLarge)
         Box {
             OutlinedButton(onClick = { currencyMenu = true }, enabled = existing == null, modifier = Modifier.fillMaxWidth()) {
@@ -315,7 +422,7 @@ private fun PreviewEditor(existing: Obligation?, busy: Boolean, writeFailed: Boo
             DropdownMenu(expanded = currencyMenu, onDismissRequest = { currencyMenu = false }) {
                 currencies.forEach { code ->
                     DropdownMenuItem(text = { Text(code) }, onClick = {
-                        if (currency != code) { currency = code; balance = ""; payment = ""; limit = ""; cashLimit = "" }
+                        if (currency != code) { dirty = true; currency = code; balance = ""; payment = ""; limit = ""; cashLimit = "" }
                         currencyMenu = false
                     })
                 }
@@ -323,28 +430,27 @@ private fun PreviewEditor(existing: Obligation?, busy: Boolean, writeFailed: Boo
         }
     }
     FormSection(R.string.form_finances) {
-        AmountField(balance, { balance = it }, R.string.form_balance)
-        if (type != ObligationType.OTHER) {
-            AmountField(payment, { payment = it }, if (type == ObligationType.CREDIT_CARD) R.string.form_minimum else R.string.form_payment)
-            AmountField(rate, { rate = it }, R.string.form_rate)
-        }
-        if (type == ObligationType.CREDIT_CARD) AmountField(limit, { limit = it }, R.string.form_limit)
+        AmountField(balance, { dirty = true; balance = it }, R.string.form_balance)
         Text(stringResource(R.string.field_amount_hint), style = MaterialTheme.typography.bodySmall)
     }
-    OutlinedButton(onClick = { expanded = !expanded }, modifier = Modifier.fillMaxWidth()) {
+    OutlinedButton(onClick = { expanded = !expanded }, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
         Text(stringResource(if (expanded) R.string.form_hide_additional else R.string.form_additional), Modifier.weight(1f))
         Icon(painterResource(R.drawable.ic_chevron), null, modifier = Modifier.size(18.dp))
     }
-    if (expanded) {
-        FormSection(R.string.form_additional) {
+    if (expanded) FormSection(R.string.form_additional) {
+        if (type != ObligationType.OTHER) {
+            AmountField(payment, { dirty = true; payment = it }, if (type == ObligationType.CREDIT_CARD) R.string.form_minimum else R.string.form_payment)
+            AmountField(rate, { dirty = true; rate = it }, R.string.form_rate)
+        }
+        if (type == ObligationType.CREDIT_CARD) AmountField(limit, { dirty = true; limit = it }, R.string.form_limit)
+        Text(stringResource(R.string.field_amount_hint), style = MaterialTheme.typography.bodySmall)
             if (type != ObligationType.OTHER) {
-                StaticField(due, { due = it.take(10) }, R.string.field_due_date)
+                StaticField(due, { dirty = true; due = it.take(10) }, R.string.field_due_date)
                 Text(stringResource(R.string.field_date_hint), style = MaterialTheme.typography.bodySmall)
             }
-            if (type == ObligationType.CREDIT_CARD) AmountField(cashLimit, { cashLimit = it }, R.string.field_cash_limit)
-            StaticField(notes, { notes = it.take(500) }, R.string.field_notes)
+            if (type == ObligationType.CREDIT_CARD) AmountField(cashLimit, { dirty = true; cashLimit = it }, R.string.field_cash_limit)
+            StaticField(notes, { dirty = true; notes = it.take(500) }, R.string.field_notes)
             Text(stringResource(R.string.preview_bank_zone), style = MaterialTheme.typography.bodySmall)
-        }
     }
     if (error) Text(stringResource(R.string.invalid_fields), color = MaterialTheme.colorScheme.error)
     if (writeFailed) Text(stringResource(R.string.storage_write_error), color = MaterialTheme.colorScheme.error)
@@ -375,7 +481,7 @@ private fun PreviewEditor(existing: Obligation?, busy: Boolean, writeFailed: Boo
         }.getOrNull()
         if (result == null) error = true else { focusManager.clearFocus(); onSave(result) }
     }) { Text(stringResource(R.string.save)) }
-    TextButton(enabled = !busy, onClick = { focusManager.clearFocus(); onCancel() }) { Text(stringResource(R.string.cancel)) }
+    TextButton(enabled = !busy, onClick = { focusManager.clearFocus(); requestCancel() }) { Text(stringResource(R.string.cancel)) }
 }
 
 @Composable
